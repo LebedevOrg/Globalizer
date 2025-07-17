@@ -1,0 +1,15 @@
+#ifndef __GTEST_CONFIG_H__
+#define __GTEST_CONFIG_H__
+
+#cmakedefine TESTDATA_PATH "@TESTDATA_PATH@"
+#cmakedefine TESTDATA_BIN_PATH "@TESTDATA_BIN_PATH@"
+
+#ifdef WIN32
+  #define LIB_RASTRIGIN "/rastrigin.dll"
+  #define LIB_STRONGINC3 "/stronginc3.dll"
+#else
+  #define LIB_RASTRIGIN "/librastrigin.so"
+  #define LIB_STRONGINC3 "/libstronginc3.so"
+#endif
+
+#endif

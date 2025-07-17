@@ -1,0 +1,46 @@
+function (setup_mpir arg_libdir arg_includedir arg_libname)
+  get_platform_depended_library_path(LIB_PATH_PART)
+  if (WIN32)
+    set(${arg_libname} mpir PARENT_SCOPE)
+  elseif(UNIX)
+    set(${arg_libname} gmp PARENT_SCOPE)
+  endif()
+  set(${arg_includedir} ${PROJECT_SOURCE_DIR}/lib/mpir/include PARENT_SCOPE)
+  set(${arg_libdir} ${PROJECT_SOURCE_DIR}/lib/mpir/${LIB_PATH_PART} PARENT_SCOPE)
+endfunction (setup_mpir)
+
+function (setup_OpenCV arg_libdir arg_includedir arg_libname)
+  ## ПОПРАВИТЬ НА НОРМАЛЬНЫЕ ПУТИ!!!
+  set(${arg_libname} opencv_world451.lib opencv_world451d.lib PARENT_SCOPE)
+  set(${arg_includedir} ${EXAMIN_OPEN_CV_PATH}/include ${EXAMIN_OPEN_CV_PATH}/include/opencv2  PARENT_SCOPE)
+  set(${arg_libdir} ${EXAMIN_OPEN_CV_PATH}/x64/vc15/lib PARENT_SCOPE)
+endfunction (setup_mpir)
+
+
+function (setup_mpfr arg_libdir arg_includedir arg_libname)
+  get_platform_depended_library_path(LIB_PATH_PART)
+  set(${arg_libname} mpfr PARENT_SCOPE)
+  set(${arg_includedir} ${PROJECT_SOURCE_DIR}/lib/mpfr/include PARENT_SCOPE)
+  set(${arg_libdir} ${PROJECT_SOURCE_DIR}/lib/mpfr/${LIB_PATH_PART} PARENT_SCOPE)
+endfunction (setup_mpfr)
+
+function (setup_mpreal arg_include)
+  set(${arg_include} ${PROJECT_SOURCE_DIR}/lib/mpreal/include PARENT_SCOPE)
+endfunction (setup_mpreal)
+
+function (setup_dislin arg_libpath arg_includedir)
+  set(${arg_includedir} ${PROJECT_SOURCE_DIR}/lib/dislin/include PARENT_SCOPE)
+  if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set(${arg_libpath} ${PROJECT_SOURCE_DIR}/lib/dislin/lib/lnx/libdiscpp.so.10
+       ${PROJECT_SOURCE_DIR}/lib/dislin/lib/lnx/discpp-10.6.so PARENT_SCOPE)
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    if (EXAMIN_TARGET_ARCH MATCHES "x86")
+      set(${arg_libpath} ${PROJECT_SOURCE_DIR}/lib/dislin/lib/win/x86/discpp.lib PARENT_SCOPE)
+    elseif (EXAMIN_TARGET_ARCH MATCHES "x64")
+      set(${arg_libpath} ${PROJECT_SOURCE_DIR}/lib/dislin/lib/win/x64/discpp.lib PARENT_SCOPE)
+    endif()
+  else()
+    set(${arg_libpath} ${PROJECT_SOURCE_DIR}/lib/dislin/lib/win/x64/discpp.lib PARENT_SCOPE)  
+  endif()
+
+endfunction(setup_dislin)

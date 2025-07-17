@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <IsPrintFile>1</IsPrintFile>
+  <r>4.9</r>
+  <Epsilon>0.01</Epsilon>
+  <MaxNumOfPoints>10000</MaxNumOfPoints>
+  <localVerificationType>1</localVerificationType>
+  <localVerificationIteration>1000</localVerificationIteration>
+  <localVerificationEpsilon>0.0001</localVerificationEpsilon>
+  <libPath>gkls.dll</libPath>
+  <libConfigPath>gkls_conf.xml</libConfigPath>
+</config>
