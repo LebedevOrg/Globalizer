@@ -1,24 +1,5 @@
-set(EXAMIN_PROJECT_NAME globalizer)
-set(EXAMIN_MCO_PROJECT_NAME globalizer_mco)
+set(EXAMIN_PROJECT_NAME Globalizer)
 cmake_minimum_required(VERSION 4.0)
-
-option(EXAMIN_USE_OneAPI "Set ON to use OneAPI" OFF)
-
-if(${EXAMIN_USE_OneAPI})
-	cmake_minimum_required(VERSION 4.0)
-    message("EXAMIN_USE_OneAPI")
-	project(${EXAMIN_PROJECT_NAME} CXX)
-	set(CMAKE_CXX_STANDARD 17)
-	set(CMAKE_CXX_STANDARD_REQUIRED ON)
-	set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-	set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-else()
-	set(CMAKE_CXX_STANDARD 17)
-	cmake_minimum_required(VERSION 4.0)
-	message("EXAMIN VS")
-	project(${EXAMIN_PROJECT_NAME})
-endif()
-
 
 cmake_policy(SET CMP0057 NEW)#adds support for the new IN_LIST operator
 
@@ -32,18 +13,11 @@ set(EXAMIN_OUTPUT_LEVEL "L0" CACHE STRING "Set level of output (L0, L1, L2)")
 option(EXAMIN_USE_MP "Set OFF to disable MPFR (extended precision in evolvent will unavaliable)" ON)
 option(EXAMIN_USE_MPI "Set OFF to disable MPI.
   In this case a stub implementation of MPI will be used and globalizer won't support multi-process mode" ON)
-option(EXAMIN_BUILD_PROBLEMS "Set OFF for not build problems" ON)
 option(EXAMIN_USE_CUDA "Set ON to use CUDA" OFF)
-option(EXAMIN_BUILD_PLOTTER "Set ON to build plotter" ON)
 option(EXAMIN_BUILD_TESTS "Set ON to build tests" ON)
 option(EXAMIN_CMAKE_VERBOSE "Set ON to show debug messages in CMake" OFF)
-option(EXAMIN_USE_OPEN_CV "Set ON to use OpenCV" OFF)
-set(EXAMIN_OPEN_CV_PATH "" CACHE STRING "Path to OpenCV build")
-option(EXAMIN_BUILD_MCO "Set ON to build globalizer_mco" OFF)
 option(EXAMIN_MAX_DIMENSION "Set MAX DIMENSION Globalizer" OFF)
-option(EXAMIN_USE_BOOST "Set ON to use BOOST" OFF)
 
-option(EXAMIN_LITE "Set ON to use shortened version" OFF)
 
 
 option(EXAMIN_ONE_MPI_PROCESS_PER_NODE "ONE PROCESS PER NODE" OFF)
@@ -70,45 +44,33 @@ else()
 	add_definitions(-DEXAMIN_MAX_DIMENSION=10)
 endif()
 
-if(${EXAMIN_USE_OneAPI})
-	if(${CMAKE_CXX_COMPILER_ID} STREQUAL Clang OR ${CMAKE_CXX_COMPILER_ID} STREQUAL IntelDPCPP)
-		if (UNIX)
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsycl $ENV{DPC_CXX_FLAGS}")
-			set(CMAKE_SHARED_LINKER_FLAGS  $ENV{DPC_LDD_FLAGS})
-		else()
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /Zi")
-		endif()
-	endif()
-	
-	if(${CMAKE_CXX_COMPILER_ID} STREQUAL GNU)
-	  add_definitions(-fdiagnostics-color=always -D_GLIBCXX_USE_CXX11_ABI=0)
-	endif()
-else()
-	set(CMAKE_CXX_STANDARD 11)
-	if (IS_GNU_COMPILER)
-	  include(cmake/GMPConfig.cmake)
-	  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
-	  find_program(CCACHE_FOUND ccache)
-	  if(CCACHE_FOUND)
-	    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
-	  endif(CCACHE_FOUND)
-	elseif (IS_MICROSOFT_COMPILER)
-	  add_definitions(/EHsc /openmp -D_CRT_SECURE_NO_WARNINGS -DNOMINMAX)
-	  replace_compiler_flag("W3" "W4")
-	  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Ox /wd4100")
-	  if (EXAMIN_TARGET_ARCH MATCHES "x86")
-	    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /arch:SSE2")
-	  endif()
-	  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /wd4100")
-	  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ignore:4099")
-	elseif (IS_INTEL_COMPILER)
-	  # TODO: add options for Intel compiler
-	endif()
 
+set(CMAKE_CXX_STANDARD 17)
+project(${EXAMIN_PROJECT_NAME})
+if (IS_GNU_COMPILER)
+  include(cmake/GMPConfig.cmake)
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+  find_program(CCACHE_FOUND ccache)
+  if(CCACHE_FOUND)
+	set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+  endif(CCACHE_FOUND)
+elseif (IS_MICROSOFT_COMPILER)
+  add_definitions(/EHsc /openmp -D_CRT_SECURE_NO_WARNINGS -DNOMINMAX)
+  replace_compiler_flag("W3" "W4")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Ox /wd4100")
+  if (EXAMIN_TARGET_ARCH MATCHES "x86")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /arch:SSE2")
+  endif()
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /wd4100")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ignore:4099")
+elseif (IS_INTEL_COMPILER)
+  # TODO: add options for Intel compiler
 endif()
+
+
 include(cmake/examin_utils.cmake)
 include(cmake/examin_mpi.cmake)
-include(cmake/examin_lib.cmake)
+#include(cmake/examin_lib.cmake)
 include(cmake/examin_doxygen.cmake)
 
 examin_initialize()
@@ -132,9 +94,6 @@ if (EXAMIN_MPI_LIB STREQUAL "")
   message(WARNING "MPI library is not found")
 endif()
 
-if(${EXAMIN_BUILD_PLOTTER})
-  setup_dislin(DISLIN_LIB DISLIN_INCLUDE)
-endif()
 
 
 
@@ -142,29 +101,7 @@ if (${EXAMIN_ONE_MPI_PROCESS_PER_NODE})
 	add_definitions(-DONE_MPI_PROCESS_PER_NODE)
 endif()
 
-if (${EXAMIN_USE_OPEN_CV})
-  #setup_OpenCV(EXAMIN_OPEN_CV_LIB_DIR EXAMIN_OPEN_CV_INCLUDES EXAMIN_OPEN_CV_LIB)
-  
-  find_package( OpenCV REQUIRED )
 
-  set(EXAMIN_OPEN_CV_LIB_DIR "")
-  set(EXAMIN_OPEN_CV_LIB ${OpenCV_LIBS})
-  set(EXAMIN_OPEN_CV_INCLUDES ${OpenCV_INCLUDE_DIRS} )
-  
-  add_definitions(-DUSE_OpenCV)
-else()
-  set(EXAMIN_OPEN_CV_INCLUDES "")
-  set(EXAMIN_OPEN_CV_LIB_DIR "")
-  set(EXAMIN_OPEN_CV_LIB "")
-endif()
-
-if (${EXAMIN_USE_OneAPI})
-  add_definitions(-DUSE_OneAPI)
-endif()
-
-if (${EXAMIN_LITE})
-  add_definitions(-DEXAMIN_LITE)
-endif()
 
 if (${EXAMIN_USE_MP})
   setup_mpir(EXAMIN_MPIR_LIB_DIR EXAMIN_MPIR_INCLUDES EXAMIN_MPIR_LIB)
@@ -174,50 +111,85 @@ else()
   add_definitions(-DNO_MPREAL)
 endif()
 
-#build output system
-add_subdirectory(${PROJECT_SOURCE_DIR}/lib/output_system)
-
 # set include directories for project
-set(EXAMIN_COMMON_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
-set(EXAMIN_PARAMETERS_DIR ${PROJECT_SOURCE_DIR}/parameters)
+set(EXAMIN_EXAMPLES_SRC_DIR ${PROJECT_SOURCE_DIR}/examples)
+set(EXAMIN_COMMON_SRC_DIR ${PROJECT_SOURCE_DIR}/globalizer)
+set(EXAMIN_PARAMETERS_DIR ${EXAMIN_COMMON_SRC_DIR}/parameters)
+set(EXAMIN_evolvent_DIR ${EXAMIN_COMMON_SRC_DIR}/evolvent)
+set(EXAMIN_extended_DIR ${EXAMIN_COMMON_SRC_DIR}/extended)
+set(EXAMIN_output_system_DIR ${EXAMIN_COMMON_SRC_DIR}/output_system)
+set(EXAMIN_problem_DIR ${EXAMIN_COMMON_SRC_DIR}/problem)
+set(EXAMIN_method_DIR ${EXAMIN_COMMON_SRC_DIR}/method)
+set(EXAMIN_calculation_DIR ${EXAMIN_COMMON_SRC_DIR}/method/calculation)
+set(EXAMIN_local_method_DIR ${EXAMIN_COMMON_SRC_DIR}/method/local_method)
+
 
 include_directories(
-  ${EXAMIN_OPEN_CV_INCLUDES}
-  ${EXAMIN_PARAMETERS_DIR}
   ${EXAMIN_MPI_INCLUDES}
   ${EXAMIN_MPIR_INCLUDES}
   ${EXAMIN_MPFR_INCLUDES}
   ${EXAMIN_MPREAL_INCLUDES}
-  ${CMAKE_CURRENT_SOURCE_DIR}/lib/Eigen/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/lib/cppoptlib/include
+  
+  ${EXAMIN_PARAMETERS_DIR}/include
+  ${EXAMIN_evolvent_DIR}/include
+  ${EXAMIN_extended_DIR}/include
+  ${EXAMIN_output_system_DIR}/include
+  ${EXAMIN_problem_DIR}/include
+  ${EXAMIN_method_DIR}/include
+  ${EXAMIN_calculation_DIR}/include
+  ${EXAMIN_local_method_DIR}/include
 )
 
 link_directories(
-  ${EXAMIN_OPEN_CV_LIB_DIR}
   ${EXAMIN_MPIR_LIB_DIR}
   ${EXAMIN_MPFR_LIB_DIR}
 )
 
-file(GLOB ROOT_HEADERS ${EXAMIN_COMMON_SRC_DIR}/*.h ${EXAMIN_COMMON_SRC_DIR}/*.hpp)
-file(GLOB PARAMETERS_HEADERS ${EXAMIN_PARAMETERS_DIR}/*.h ${EXAMIN_PARAMETERS_DIR}/*.hpp)
-file(GLOB ROOT_SOURCES ${EXAMIN_COMMON_SRC_DIR}/*.c ${EXAMIN_COMMON_SRC_DIR}/*.cpp)
+file(GLOB ROOT_HEADERS ${EXAMIN_COMMON_SRC_DIR}/include/*.h ${EXAMIN_COMMON_SRC_DIR}/include/*.hpp )
+file(GLOB evolvent_HEADERS ${EXAMIN_evolvent_DIR}/include/*.h ${EXAMIN_evolvent_DIR}/include/*.hpp)
+file(GLOB extended_HEADERS ${EXAMIN_extended_DIR}/include/*.h ${EXAMIN_extended_DIR}/include/*.hpp)
+file(GLOB output_system_HEADERS ${EXAMIN_output_system_DIR}/include/*.h ${EXAMIN_output_system_DIR}/include/*.hpp)
+file(GLOB problem_HEADERS ${EXAMIN_problem_DIR}/include/*.h ${EXAMIN_problem_DIR}/include/*.hpp)
+file(GLOB method_HEADERS ${EXAMIN_method_DIR}/include/*.h ${EXAMIN_method_DIR}/include/*.hpp)
+file(GLOB calculation_HEADERS ${EXAMIN_calculation_DIR}/include/*.h ${EXAMIN_calculation_DIR}/include/*.hpp)
+file(GLOB local_method_HEADERS ${EXAMIN_local_method_DIR}/include/*.h ${EXAMIN_local_method_DIR}/include/*.hpp)						
+file(GLOB PARAMETERS_HEADERS ${EXAMIN_PARAMETERS_DIR}/include/*.h ${EXAMIN_PARAMETERS_DIR}/include/*.hpp)
+
+file(GLOB ROOT_SOURCES ${EXAMIN_COMMON_SRC_DIR}/src/*.c ${EXAMIN_COMMON_SRC_DIR}/src/*.cpp)
+file(GLOB evolvent_SOURCES ${EXAMIN_evolvent_DIR}/src/*.c ${EXAMIN_evolvent_DIR}/src/*.cpp)
+file(GLOB extended_SOURCES ${EXAMIN_extended_DIR}/src/*.c ${EXAMIN_extended_DIR}/src/*.cpp)
+file(GLOB output_system_SOURCES ${EXAMIN_output_system_DIR}/src/*.c ${EXAMIN_output_system_DIR}/src/*.cpp)
+file(GLOB problem_SOURCES ${EXAMIN_problem_DIR}/src/*.c ${EXAMIN_problem_DIR}/src/*.cpp)
+file(GLOB method_SOURCES ${EXAMIN_method_DIR}/src/*.c ${EXAMIN_method_DIR}/src/*.cpp)
+file(GLOB calculation_SOURCES ${EXAMIN_calculation_DIR}/src/*.c ${EXAMIN_calculation_DIR}/src/*.cpp)
+file(GLOB local_method_SOURCES ${EXAMIN_local_method_DIR}/src/*.c ${EXAMIN_local_method_DIR}/src/*.cpp)
+
 
 if (EXAMIN_USE_CUDA)
   find_package(CUDA REQUIRED)
 endif()
 
 # build main library and executable
-set(ALL_SRC_FILES ${ROOT_HEADERS} ${PARAMETERS_HEADERS} ${ROOT_SOURCES})
+set(ALL_SRC_FILES ${ROOT_HEADERS} ${PARAMETERS_HEADERS} ${ROOT_SOURCES}
+${evolvent_HEADERS} 
+${extended_HEADERS}
+${output_system_HEADERS}
+${problem_HEADERS}
+${method_HEADERS}
+${calculation_HEADERS}
+${local_method_HEADERS}
+${evolvent_SOURCES}
+${extended_SOURCES}
+${output_system_SOURCES}
+${problem_SOURCES}
+${method_SOURCES}
+${calculation_SOURCES}
+${local_method_SOURCES}
+)
 list(REMOVE_ITEM ALL_SRC_FILES ${EXAMIN_COMMON_SRC_DIR}/main.cpp)
-list(REMOVE_ITEM ALL_SRC_FILES ${EXAMIN_COMMON_SRC_DIR}/main_mco.cpp)
 
 add_library(${EXAMIN_LIB_NAME} STATIC ${ALL_SRC_FILES})
-if (${EXAMIN_BUILD_PLOTTER})
-  add_executable(${EXAMIN_PROJECT_NAME} ${EXAMIN_COMMON_SRC_DIR}/main.cpp ${PROJECT_SOURCE_DIR}/plotter/isolinesPlotter.cpp)
-  add_definitions(-DUSE_PLOTTER)
-else()
-  add_executable(${EXAMIN_PROJECT_NAME} ${EXAMIN_COMMON_SRC_DIR}/main.cpp)
-endif()
+add_executable(${EXAMIN_PROJECT_NAME} ${EXAMIN_EXAMPLES_SRC_DIR}/main.cpp)
 
 
 if (${EXAMIN_PYTHON})
@@ -249,8 +221,6 @@ else()
 endif()
 
 target_include_directories(${EXAMIN_PROJECT_NAME} PRIVATE ${EXAMIN_COMMON_SRC_DIR}
-                                                  PRIVATE ${DISLIN_INCLUDE}
-                                                  PRIVATE ${PROJECT_SOURCE_DIR}/plotter
 												  PRIVATE ${Python_INCLUDE_DIRS} 
 												  PRIVATE ${Python_NumPy_INCLUDE_DIRS})
 												  
@@ -258,19 +228,12 @@ include_directories(${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 												  
 target_link_libraries(${EXAMIN_PROJECT_NAME} ${EXAMIN_LIB_NAME} ${Python_LIBRARIES}) #/opt/intel/impi/2017.1.132/intel64/lib/libmpi.so)
 
-if (${EXAMIN_BUILD_MCO})
-  add_executable(${EXAMIN_MCO_PROJECT_NAME} ${EXAMIN_COMMON_SRC_DIR}/main_mco.cpp)
-  target_include_directories(${EXAMIN_MCO_PROJECT_NAME} PRIVATE ${EXAMIN_COMMON_SRC_DIR})
-  target_link_libraries(${EXAMIN_MCO_PROJECT_NAME} ${EXAMIN_LIB_NAME})
-endif()
 
 target_link_libraries(${EXAMIN_LIB_NAME}
-  ${EXAMIN_OPEN_CV_LIB}
   ${EXAMIN_MPI_LIB}
   ${EXAMIN_MPFR_LIB}
   ${EXAMIN_MPIR_LIB}
   ${DISLIN_LIB}
-  output_system
 )
 
 
@@ -287,9 +250,7 @@ set_target_properties(${EXAMIN_PROJECT_NAME} PROPERTIES OUTPUT_NAME_RELEASE ${EX
 if (IS_GNU_COMPILER)
   target_compile_options(${EXAMIN_LIB_NAME} INTERFACE -march=native -fopenmp)
   set_target_properties(${EXAMIN_PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,--no-as-needed -ldl -fopenmp")
-  if (${EXAMIN_BUILD_MCO})
-    set_target_properties(${EXAMIN_MCO_PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,--no-as-needed -ldl -fopenmp")
-  endif()
+
 endif()
 
 find_package(OpenMP)
@@ -305,27 +266,8 @@ if(${EXAMIN_BUILD_TESTS})
   add_subdirectory(${PROJECT_SOURCE_DIR}/tests)
 endif()
 
-# add plotter
-if(${EXAMIN_BUILD_PLOTTER})
-  add_subdirectory(${PROJECT_SOURCE_DIR}/plotter)
-endif()
 
-#add xml parser lib
-add_subdirectory(${PROJECT_SOURCE_DIR}/lib/pugixml)
-target_link_libraries(${EXAMIN_LIB_NAME} pugixml)
 
-# add problems
-if (${EXAMIN_BUILD_PROBLEMS})
-    #build 3rd party problems generators
-    add_subdirectory(${PROJECT_SOURCE_DIR}/lib/grishagin)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/lib/gkls)
-
-    #build shared libraries
-    subdirlist(SUBDIRS ${PROJECT_SOURCE_DIR}/problems)
-    foreach(subdir ${SUBDIRS})
-        add_subdirectory(${subdir})
-    endforeach()
-endif()
 
 if(${EXAMIN_CMAKE_VERBOSE})
   print_build_config()
@@ -335,16 +277,32 @@ endif()
 # create source groups for VS IDE projects
 if (IS_MICROSOFT_COMPILER)
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-  set_property(TARGET pugixml PROPERTY FOLDER "3rd-party")
-  if(${EXAMIN_BUILD_TESTS})
-    set_property(TARGET gtests PROPERTY FOLDER "3rd-party")
-  endif()
-  if(${EXAMIN_BUILD_PROBLEMS})
-    set_property(TARGET gkls_functions PROPERTY FOLDER "3rd-party")
-    set_property(TARGET grishagin_functions PROPERTY FOLDER "3rd-party")
-  endif()
+  #set_property(TARGET pugixml PROPERTY FOLDER "3rd-party")
+  #if(${EXAMIN_BUILD_TESTS})
+  #  set_property(TARGET gtests PROPERTY FOLDER "3rd-party")
+  #endif()
+
 
   source_group("Header Files" FILES ${ROOT_HEADERS})
   source_group("Header Files\\Parameters" FILES ${PARAMETERS_HEADERS})
+  source_group("Header Files\\evolvent" FILES ${evolvent_HEADERS}) 
+  source_group("Header Files\\extended" FILES ${extended_HEADERS})
+  source_group("Header Files\\output_system" FILES ${output_system_HEADERS})
+  source_group("Header Files\\problem" FILES ${problem_HEADERS})
+  source_group("Header Files\\method" FILES ${method_HEADERS})
+  source_group("Header Files\\calculation" FILES ${calculation_HEADERS})
+  source_group("Header Files\\local_method" FILES ${local_method_HEADERS})
+
   source_group("Source Files" FILES ${ROOT_SOURCES})
+  source_group("Source Files\\evolvent" FILES ${evolvent_SOURCES})
+  source_group("Source Files\\extended" FILES ${extended_SOURCES})
+  source_group("Source Files\\output_system" FILES ${output_system_SOURCES})
+  source_group("Source Files\\problem" FILES ${problem_SOURCES})
+  source_group("Source Files\\method" FILES ${method_SOURCES})
+  source_group("Source Files\\calculation" FILES ${calculation_SOURCES})
+  source_group("Source Files\\local_method" FILES ${local_method_SOURCES})
+  
+  
+  
+  
 endif()
