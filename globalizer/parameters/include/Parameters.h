@@ -75,6 +75,9 @@ public:
   int MyMap;
   /// последний сохраненный номер итерации
   int iterationNumber;
+  
+  /// Суммарное время решения
+  double timeSolve;
 
   //Параметры командной строки
 
@@ -253,6 +256,9 @@ public:
 
   /// Использовать  расширенный консольный интерфейс 
   TBool<Parameters> IsUseExtendedConsole;
+
+  /// Включить автоматическую настройку параметров алгоритма оптимизации, если выключено - используются значения по умолчанию
+  TBool<Parameters> automaticParametersSetting;
 
   /// Проверка правильности при изменение параметров
   virtual int CheckValueParameters(int index = 0);

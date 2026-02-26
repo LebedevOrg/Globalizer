@@ -56,6 +56,7 @@ Parameters parameters;
 // ------------------------------------------------------------------------------------------------
 void Parameters::SetDefaultParameters()
 {
+  parameters.timeSolve = 0;
   InitOption(HELP, 0, "-HELP", "Print Help", 1);
   InitOption(IsPlot, 0, "-PLOT", "Draw a graph of the function", 1);
   InitOption(ShowFigure, false, "-ShowFigure", "a flag indicating the need to open the resulting drawing in an interactive window on the screen", 1);
@@ -161,6 +162,8 @@ void Parameters::SetDefaultParameters()
   InitOption(IsUseStartPoint, false, "-IsUSP", "Use the starting point from the task", 1);
 
   InitOption(IsUseExtendedConsole, false, "-IsUEC", "Use the extended console interface", 1);
+
+  InitOption(automaticParametersSetting, false, "-IsAPS", "Enable automatic adjustment of optimization algorithm parameters, if disabled, default values are used.", 1);
 
 
   ProcRank.SetGetter(&Parameters::GetProcRank);

@@ -46,7 +46,7 @@ Method::Method(Task& _pTask, SearchData& _pData,
 {
   isFoundOptimalPoint = false;
 
-  MaxNumOfTrials = parameters.MaxNumOfPoints[_pTask.GetProcLevel()];
+  MaxNumOfTrials = parameters.MaxNumOfPoints[0];
   if (MaxNumOfTrials < 1)
   {
     throw EXCEPTION("MaxNumOfTrials is out of range");

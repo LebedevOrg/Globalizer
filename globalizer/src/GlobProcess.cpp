@@ -345,7 +345,7 @@ void Process::OldPrintOptimEstimationToConsole(Trial OptimEstimation)
     break;
   }
   delete[] allOptimumPoints;
-
+  print << "M = " << pData->M[0] << "\n";
   printf("Global optimum %s\n", (res) ? "FOUND!" : "NOT FOUND");
 
   NumberOfTrials = pMethod->GetNumberOfTrials();
@@ -360,7 +360,7 @@ void Process::OldPrintOptimEstimationToConsole(Trial OptimEstimation)
   printf("\nNumberLocalMethodtStart = %d\n", pMethod->GetNumberLocalMethodtStart());
 
   printf("\nSolve time = %lf\n\n\n", duration);
-
+  parameters.timeSolve += duration;
 }
 
 // ------------------------------------------------------------------------------------------------

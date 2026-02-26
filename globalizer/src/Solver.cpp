@@ -110,22 +110,25 @@ int Solver::CheckParameters()
     }
   }
 
-  if (parameters.MaxNumOfPoints[0] > 100 
-    && parameters.NumThread.GetIsChange() == false && parameters.NumPoints.GetIsChange() == false
-    && parameters.TypeCalculation == OMP)
+  if (parameters.automaticParametersSetting)
   {
-    if (parameters.Dimension > 2 && parameters.Dimension < 10 && parameters.startPoint.GetIsChange() == false)
+    if (parameters.MaxNumOfPoints[0] > 100
+      && parameters.NumThread.GetIsChange() == false && parameters.NumPoints.GetIsChange() == false
+      && parameters.TypeCalculation == OMP)
     {
-      parameters.NumThread = std::max(int(parameters.GetMaxNumOMP() / 2), 1);
-      parameters.NumPoints = parameters.NumThread;
-    }
-    if (parameters.Dimension > 5
-      && parameters.r.GetIsChange() == false)
-    {
-      parameters.r = parameters.r * 2;
+      if (parameters.Dimension > 2 && parameters.Dimension < 10 && parameters.startPoint.GetIsChange() == false)
+      {
+        parameters.NumThread = std::max(int(parameters.GetMaxNumOMP() / 2), 1);
+        parameters.NumPoints = parameters.NumThread;
+      }
+      if (parameters.Dimension > 5
+        && parameters.r.GetIsChange() == false)
+      {
+        parameters.r = parameters.r * 2;
+      }
     }
   }
-
+    
   if (parameters.IsPlot)
   {
     if (parameters.iterPointsSavePath.GetIsChange() == false)
@@ -133,7 +136,7 @@ int Solver::CheckParameters()
       parameters.iterPointsSavePath = "Globalizer_iterPointsSavePath.txt";
     }
   }
-
+  
   return 0;
 }
 
