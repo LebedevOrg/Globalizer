@@ -37,7 +37,7 @@
 #include <string>
 #include <stdio.h>
 
-
+class SearchDataSerializer;
 
 
 /// Параметры системы оптимизации
@@ -128,7 +128,7 @@ public:
   TBool<Parameters> IsPrintSectionPoint;
 
   /// максимальное число итераций для процессов на каждом уровне //  размер - NumOfProcLevels{100, 100, 100, 100};// // параметры метода
-  TInts<Parameters> MaxNumOfPoints;
+  TInt<Parameters> MaxNumOfPoints;
   /// Распечатать справку
   TFlag<Parameters> HELP;
   /// Имя файла для сохранения изображения
@@ -259,6 +259,12 @@ public:
 
   /// Включить автоматическую настройку параметров алгоритма оптимизации, если выключено - используются значения по умолчанию
   TBool<Parameters> automaticParametersSetting;
+
+  /// Путь для сохранения и загрузки
+  TString<Parameters> fileSerializer;
+
+  /// Сохранение в файл
+  SearchDataSerializer* serializer;
 
   /// Проверка правильности при изменение параметров
   virtual int CheckValueParameters(int index = 0);

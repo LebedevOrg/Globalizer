@@ -137,9 +137,8 @@ protected:
   /// Массив для сохранения точек для последующей печати и рисования
   std::vector<Trial*> printPoints;
 
-  SearchDataSerializer serializer;
-  std::string saveFileName;
-  int lastSavedTrialsCount;
+  /// Количество сохраненных точек
+  int lastSavedTrialsCount = 0;
 
   /// Метод сохраняющий точки в статический массив
   virtual void  SavePoints();
@@ -352,16 +351,9 @@ public:
   /// Печатает информацию о сечениях
   virtual void PrintSection();
 
-  void SetSaveFileName(const std::string& filename)
-  {
-    saveFileName = filename;
-    serializer.SetSearchData(pData);
-    lastSavedTrialsCount = 0;
-  }
-
   void SaveCurrentProgress()
   {
-    if (saveFileName.empty()) return;
+    if (parameters.fileSerializer.ToString().empty()) return;
 
     // Получаем новые точки и интервалы с последнего сохранения
     std::vector<Trial*> newTrials;
@@ -385,7 +377,7 @@ public:
       intervalCounter++;
     }
 
-    serializer.SaveProgress(saveFileName, newTrials, newIntervals, pData->GetBestTrial());
+    parameters.serializer->SaveProgress(parameters.fileSerializer.ToString(), newTrials, newIntervals, pData->GetBestTrial());
 
     lastSavedTrialsCount = allTrials.size();
   }

@@ -46,7 +46,7 @@ Method::Method(Task& _pTask, SearchData& _pData,
 {
   isFoundOptimalPoint = false;
 
-  MaxNumOfTrials = parameters.MaxNumOfPoints[0];
+  MaxNumOfTrials = parameters.MaxNumOfPoints;
   if (MaxNumOfTrials < 1)
   {
     throw EXCEPTION("MaxNumOfTrials is out of range");
@@ -753,8 +753,7 @@ void Method::CalculateFunctionals()
     functionCalculationCount[j] += outputSet.countCalcTrials[j];
   }
 
-  // Сохраняем состояние после первой итерации
-  SaveCurrentProgress();
+
 }
 
 
@@ -1234,6 +1233,9 @@ void Method::RenewSearchData()
     }
   }
   isFindInterval = false;
+
+  // Сохраняем состояние после первой итерации
+  SaveCurrentProgress();
 }
 
 // ------------------------------------------------------------------------------------------------

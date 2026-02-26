@@ -9,7 +9,7 @@
 //                                                                         //
 //  Purpose:   Serialization of search data to JSON format                 //
 //                                                                         //
-//  Author(s): Based on Python iOpt code                                   //
+//  Author(s): Lebedev.i                                                   //
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 
@@ -42,11 +42,12 @@
 class SearchDataSerializer
 {
 private:
+  /// Поисковая информация
   SearchData* pSearchData;
+  /// Рабочее имя файла
   std::string currentFileName;
+  /// Произведено ли начальное сохранение
   bool isFirstSave;
-
-  // ==================== Вспомогательные методы ====================
 
   /// Экранирование специальных символов в строке для JSON
   static std::string EscapeJsonString(const std::string& str)
@@ -724,17 +725,93 @@ private:
     }
     infile.close();
 
-    // Обновляем счетчик Count
+    // ==================== ОБНОВЛЕНИЕ search_data ====================
+
+    // 1. Обновляем Count
     size_t countPos = content.find("\"Count\": ");
     if (countPos != std::string::npos)
     {
       size_t countEnd = content.find(",", countPos);
+      if (countEnd == std::string::npos)
+      {
+        countEnd = content.find("\n", countPos);
+      }
       if (countEnd != std::string::npos)
       {
         std::string newCount = "\"Count\": " + IntToString(pSearchData->GetCount());
         content.replace(countPos, countEnd - countPos, newCount);
       }
     }
+
+    // 2. Обновляем массив M (оценки констант Липшица)
+    size_t mPos = content.find("\"M\": [");
+    if (mPos != std::string::npos)
+    {
+      size_t mEnd = content.find("]", mPos);
+      if (mEnd != std::string::npos)
+      {
+        std::string newM = "\"M\": [";
+        for (int i = 0; i < pSearchData->NumOfFuncs; ++i)
+        {
+          if (i > 0) newM += ",";
+          newM += FormatDouble(pSearchData->M[i]);
+        }
+        newM += "]";
+        content.replace(mPos, mEnd - mPos + 1, newM);
+      }
+    }
+
+    // 3. Обновляем массив Z (минимальные значения функций)
+    size_t zPos = content.find("\"Z\": [");
+    if (zPos != std::string::npos)
+    {
+      size_t zEnd = content.find("]", zPos);
+      if (zEnd != std::string::npos)
+      {
+        std::string newZ = "\"Z\": [";
+        for (int i = 0; i < pSearchData->NumOfFuncs; ++i)
+        {
+          if (i > 0) newZ += ",";
+          newZ += FormatDouble(pSearchData->Z[i]);
+        }
+        newZ += "]";
+        content.replace(zPos, zEnd - zPos + 1, newZ);
+      }
+    }
+
+    // 4. Обновляем local_r
+    size_t localRPos = content.find("\"local_r\": ");
+    if (localRPos != std::string::npos)
+    {
+      size_t localREnd = content.find(",", localRPos);
+      if (localREnd == std::string::npos)
+      {
+        localREnd = content.find("\n", localRPos);
+      }
+      if (localREnd != std::string::npos)
+      {
+        std::string newLocalR = "\"local_r\": " + FormatDouble(pSearchData->local_r);
+        content.replace(localRPos, localREnd - localRPos, newLocalR);
+      }
+    }
+
+    // 5. Обновляем общее количество интервалов (если есть отдельное поле)
+    size_t intervalsCountPos = content.find("\"intervals_count\": ");
+    if (intervalsCountPos != std::string::npos)
+    {
+      size_t intervalsCountEnd = content.find(",", intervalsCountPos);
+      if (intervalsCountEnd == std::string::npos)
+      {
+        intervalsCountEnd = content.find("\n", intervalsCountPos);
+      }
+      if (intervalsCountEnd != std::string::npos)
+      {
+        std::string newIntervalsCount = "\"intervals_count\": " + IntToString(pSearchData->GetCount() - 1);
+        content.replace(intervalsCountPos, intervalsCountEnd - intervalsCountPos, newIntervalsCount);
+      }
+    }
+
+    // ==================== ОБНОВЛЕНИЕ best_trial ====================
 
     // Обновляем лучшую точку
     size_t bestTrialPos = content.find("\"best_trial\": ");
@@ -750,6 +827,8 @@ private:
       std::string newBestStr = "\"best_trial\": " + TrialToJson(newBestTrial);
       content.replace(bestTrialPos, bestTrialEnd - bestTrialPos, newBestStr);
     }
+
+    // ==================== ДОБАВЛЕНИЕ НОВЫХ ТОЧЕК ====================
 
     // Добавляем новые точки
     if (newTrials.size() > 0)
@@ -790,6 +869,8 @@ private:
       }
     }
 
+    // ==================== ДОБАВЛЕНИЕ НОВЫХ ИНТЕРВАЛОВ ====================
+
     // Добавляем новые интервалы
     if (newIntervals.size() > 0)
     {
@@ -825,6 +906,20 @@ private:
             content.insert(intervalsEnd, newIntervalsStr + "\n  ");
           }
         }
+      }
+    }
+
+    // ==================== ОБНОВЛЕНИЕ ВРЕМЕННОЙ МЕТКИ ====================
+
+    // Обновляем временную метку
+    size_t timestampPos = content.find("\"timestamp\": \"");
+    if (timestampPos != std::string::npos)
+    {
+      size_t timestampEnd = content.find("\"", timestampPos + 14);
+      if (timestampEnd != std::string::npos)
+      {
+        std::string newTimestamp = "\"timestamp\": \"" + GetCurrentTimeISO() + "\"";
+        content.replace(timestampPos, timestampEnd - timestampPos + 1, newTimestamp);
       }
     }
 
@@ -869,7 +964,7 @@ public:
     json << "  \"method_parameters\": {\n";
     json << "    \"eps\": " << FormatDouble(parameters.Epsilon) << ",\n";
     json << "    \"r\": " << FormatDouble(parameters.r) << ",\n";
-    json << "    \"iters_limit\": " << parameters.MaxNumOfPoints[0] << ",\n";
+    json << "    \"iters_limit\": " << parameters.MaxNumOfPoints << ",\n";
     json << "    \"number_of_parallel_points\": " << parameters.NumPoints << ",\n";
     json << "    \"start_point\": [";
     for (int i = 0; i < parameters.Dimension; ++i)

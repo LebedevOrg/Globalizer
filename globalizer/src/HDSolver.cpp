@@ -166,7 +166,7 @@ int HDSolver::Solve()
       parameters.M_constant[j] = 1;
     }
 
-    auto mnp = parameters.MaxNumOfPoints[0];
+    auto mnp = parameters.MaxNumOfPoints;
     int iterationCount = parameters.HDSolverIterationCount;
     
     alternativeStartingPoint.resize(originalDimension);
@@ -227,7 +227,7 @@ int HDSolver::Solve()
       }
       //parameters.MaxNumOfPoints[0] = 2;
 
-      parameters.MaxNumOfPoints[0] = parameters.MaxNumOfPoints[0] + points.size();
+      parameters.MaxNumOfPoints = parameters.MaxNumOfPoints + points.size();
 
       finalSolver->SetPoint(points);
 
@@ -241,7 +241,7 @@ int HDSolver::Solve()
 
       UpdateStartPoint(solutionResult, bestValue, originalDimension, startParameterNumber, points, dynamic_cast<HDTask*>(finalSolver->GetTask()));
 
-      parameters.MaxNumOfPoints[0] = mnp ;
+      parameters.MaxNumOfPoints = mnp ;
 
       if (bestValue == MaxDouble)
       {
@@ -251,7 +251,7 @@ int HDSolver::Solve()
         }
       }
     }
-    parameters.MaxNumOfPoints[0] = mnp;
+    parameters.MaxNumOfPoints = mnp;
 
   }
   catch (const Exception& e)
