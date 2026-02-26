@@ -529,6 +529,8 @@ void Method::FirstIteration()
 
   }
 
+  // Сохраняем состояние после первой итерации
+  SaveCurrentProgress();
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -751,6 +753,8 @@ void Method::CalculateFunctionals()
     functionCalculationCount[j] += outputSet.countCalcTrials[j];
   }
 
+  // Сохраняем состояние после первой итерации
+  SaveCurrentProgress();
 }
 
 

@@ -36,7 +36,7 @@
 #include "SearchIteration.h"
 #include "SearchInterval.h"
 
-
+#include "SearchDataSerializer.h"
 
 // ------------------------------------------------------------------------------------------------
 
@@ -136,6 +136,10 @@ protected:
 
   /// Массив для сохранения точек для последующей печати и рисования
   std::vector<Trial*> printPoints;
+
+  SearchDataSerializer serializer;
+  std::string saveFileName;
+  int lastSavedTrialsCount;
 
   /// Метод сохраняющий точки в статический массив
   virtual void  SavePoints();
@@ -307,11 +311,11 @@ public:
   virtual void PrintLevelPoints(const std::string& fileName);
 
   /// Сохраняем все точки, со всех уровней, в файл
-  virtual void PrintPoints(const std::string & fileName);
+  virtual void PrintPoints(const std::string& fileName);
 
   /// Метод Хука-Дживса
   void HookeJeevesMethod(Trial& point, std::vector<Trial*>& localPoints);
-  
+
   ///Возвращает Число вычислений каждой функции
   virtual std::vector<int> GetFunctionCalculationCount();
 
@@ -348,6 +352,43 @@ public:
   /// Печатает информацию о сечениях
   virtual void PrintSection();
 
+  void SetSaveFileName(const std::string& filename)
+  {
+    saveFileName = filename;
+    serializer.SetSearchData(pData);
+    lastSavedTrialsCount = 0;
+  }
+
+  void SaveCurrentProgress()
+  {
+    if (saveFileName.empty()) return;
+
+    // Получаем новые точки и интервалы с последнего сохранения
+    std::vector<Trial*> newTrials;
+    std::vector<SearchInterval*> newIntervals;
+
+    std::vector<Trial*>& allTrials = pData->GetTrials();
+    for (int i = lastSavedTrialsCount; i < (int)allTrials.size(); ++i)
+    {
+      newTrials.push_back(allTrials[i]);
+    }
+
+    // Собираем новые интервалы
+    int currentIntervalsCount = pData->GetCount();
+    int intervalCounter = 0;
+    for (SearcDataIterator it = pData->GetBeginIterator(); it; ++it)
+    {
+      if (intervalCounter >= lastSavedTrialsCount - 1)
+      {
+        newIntervals.push_back(*it);
+      }
+      intervalCounter++;
+    }
+
+    serializer.SaveProgress(saveFileName, newTrials, newIntervals, pData->GetBestTrial());
+
+    lastSavedTrialsCount = allTrials.size();
+  }
 };
 
 #endif

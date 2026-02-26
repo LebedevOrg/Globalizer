@@ -38,8 +38,7 @@ class SearchData
 {
   friend class SearcDataIterator;
 protected:
-  /// Число функций задачи
-  int NumOfFuncs;
+
   /// Максимальный размер МСП = максимальному числу итераций метода
   int MaxSize;
   /// Текущее число интервалов в дереве
@@ -97,6 +96,8 @@ protected:
    xl() < x < xr */
   TreeNode* FindIn(TreeNode *p, Trial* x) const;
 public:
+  /// Число функций задачи
+  int NumOfFuncs;
 
   SearchData(int _NumOfFuncs, int _MaxSize = DefaultSearchDataSize);
   SearchData(int _NumOfFuncs, int _MaxSize, int _queueSize);
@@ -202,6 +203,12 @@ public:
 
   /// Вычисляемое r
   double local_r;
+
+  /// Число функций задачи
+  int GetNumOfFuncs()
+  {
+    return NumOfFuncs;
+  }
 }; // SearchData
 
 
