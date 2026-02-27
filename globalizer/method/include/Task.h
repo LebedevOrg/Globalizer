@@ -271,6 +271,13 @@ public:
 * \return true, если значение допустимо, иначе false.
 */
   virtual void CopyPoint(double* y, Trial* point);
+
+  /// <summary>
+/// Копируем координаты точки
+/// </summary>
+/// <param name="resPoint"></param>
+/// <param name="y"></param>
+  virtual void TransformPoint(double* resPoint, const double* y);
 };
 
 #endif

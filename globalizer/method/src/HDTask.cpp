@@ -44,17 +44,25 @@ const double* HDTask::GetOptimumPoint() const
 }
 
 // ------------------------------------------------------------------------------------------------
-double HDTask::CalculateFuncs(const double* y, int fNumber)
+void HDTask::TransformPoint(double* resPoint, const double* y)
 {
-  double* point = new double[parameters.startPoint.GetSize()];
   for (int i = 0; i < parameters.startPoint.GetSize(); i++)
   {
-    point[i] = parameters.startPoint[i];
+    resPoint[i] = parameters.startPoint[i];
   }
   for (int i = 0; i < parameters.Dimension; i++)
   {
-    point[i + startParameterNumber] = y[i];
+    resPoint[i + startParameterNumber] = y[i];
   }
+}
+
+// ------------------------------------------------------------------------------------------------
+double HDTask::CalculateFuncs(const double* y, int fNumber)
+{
+  double* point = new double[parameters.startPoint.GetSize()];
+
+  TransformPoint(point, y);
+
   double multInLevel = parameters.functionSignMultiplier[GetProcLevel()];
   double result = multInLevel * pProblem->CalculateFunctionals(point, fNumber);
   return result;

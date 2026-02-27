@@ -260,4 +260,11 @@ void Task::CopyPoint(double* y, Trial* point)
     point->y[i] = y[i];
 }
 
+
+// ------------------------------------------------------------------------------------------------
+void Task::TransformPoint(double* resPoint, const double* y)
+{
+  for (int i =0; i < parameters.Dimension; i++)
+    resPoint[i] = y[i];
+}
 // - end of file ----------------------------------------------------------------------------------

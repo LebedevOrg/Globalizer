@@ -442,6 +442,7 @@ int Solver::CreateProcess()
   }
 
   parameters.serializer->SetSearchData(pData);
+  parameters.serializer->SetTask(pTask);
 
   // Инициализируем числа с расширенной точностью
   InitAutoPrecision();
