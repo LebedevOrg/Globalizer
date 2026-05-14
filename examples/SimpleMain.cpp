@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
   GlobalizerInitialization(argc, argv);
 
   parameters.Dimension = 2; // Размерность задачи
-  ProblemName problemName = STRONGINC3_FUNCTION_POINTER; // Задача Стронгина задается как указатель на функцию
+  ProblemName problemName = RASTRIGIN_INT; // Задача Стронгина задается как указатель на функцию
   IProblem* problem = nullptr;
   parameters.IsPlot = true; // Включаем рисование графика функции с точками испытаний (сохраняются в файл)
 

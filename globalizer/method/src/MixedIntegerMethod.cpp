@@ -86,7 +86,7 @@ void MixedIntegerMethod::CalculateCurrentPoint(Trial& pCurTrialsj, SearchInterva
     pCurTrialsj.SetX(0.5 * (BestIntervalsj->xl() + BestIntervalsj->xr()) -
       (((BestIntervalsj->zr() - BestIntervalsj->zl()) > 0) ? 1 : -1) *
       pow(fabs(BestIntervalsj->zr() - BestIntervalsj->zl()) /
-        pData->M[BestIntervalsj->izl()], parameters.Dimension) / 2 / parameters.r);
+        pData->M[BestIntervalsj->izl()], pTask.GetNumberOfContinuousVariable()) / 2 / parameters.r);
     //      pCurTrialsj.x = BestIntervalsj->xl() + (0.5*BestIntervalsj->dx -
     //(((BestIntervalsj->zr() - BestIntervalsj->zl)>0)?1:-1)*pow(fabs(BestIntervalsj->zr() -
     //BestIntervalsj->zl)/pData->M[BestIntervalsj->izl],parameters.Dimension)/(2*r));
@@ -277,7 +277,7 @@ void MixedIntegerMethod::FirstIteration()
           iteration.pCurTrials[ind]->discreteValuesIndex = e;
           pData->GetTrials().push_back(iteration.pCurTrials[ind]);
 
-          for (size_t iCNP = 0; iCNP < parameters.Dimension; iCNP++)
+          for (size_t iCNP = 0; iCNP < pTask.GetNumberOfContinuousVariable(); iCNP++)
           {
             iteration.pCurTrials[ind]->y[iCNP] = pTask.GetA()[iCNP] + ((double(q) + 1.0) * h) * (pTask.GetB()[iCNP] - pTask.GetA()[iCNP]);
           }
@@ -319,7 +319,8 @@ void MixedIntegerMethod::FirstIteration()
       typeColor.reserve(numberOfPoints + 2);
 
 
-      while (!input.eof()) {
+      while (!input.eof()) 
+      {
         size_t nextPosition = 0;
         std::vector<double> currentPoint(parameters.Dimension);
         double curVal;

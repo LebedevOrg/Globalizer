@@ -93,10 +93,10 @@ Method::Method(Task& _pTask, SearchData& _pData,
   //===========================================================================================================================================
 
 
-  if (parameters.Dimension == 1)
+  if (pTask.GetNumberOfContinuousVariable() == 1)
     StartLocalIteration = 5;
   else
-    StartLocalIteration = parameters.Dimension * 70 / parameters.NumPoints;
+    StartLocalIteration = pTask.GetNumberOfContinuousVariable() * 70 / parameters.NumPoints;
 
   functionCalculationCount.resize(pTask.GetNumOfFunc());
   for (int i = 0; i < pTask.GetNumOfFunc(); i++)
@@ -172,7 +172,7 @@ double Method::Update_r(int iter, int procLevel)
   if (iterationCount <= 0)
     iterationCount = 1;
 
-  double p = 1.0 / parameters.Dimension;
+  double p = 1.0 / pTask.GetNumberOfContinuousVariable();
   double resR = baseR + parameters.rDynamic / pow(iterationCount, p);
 
   return resR;
@@ -198,7 +198,7 @@ void Method::CalculateCurrentPoint(Trial& pCurTrialsj, SearchInterval* BestInter
     pCurTrialsj.SetX(0.5 * (BestIntervalsj->xl() + BestIntervalsj->xr()) -
       (((BestIntervalsj->zr() - BestIntervalsj->zl()) > 0) ? 1 : -1) *
       pow(fabs(BestIntervalsj->zr() - BestIntervalsj->zl()) /
-        pData->M[BestIntervalsj->izl()], parameters.Dimension) / 2 / parameters.r);
+        pData->M[BestIntervalsj->izl()], pTask.GetNumberOfContinuousVariable()) / 2 / parameters.r);
   }
 
   pCurTrialsj.leftInterval = BestIntervalsj;
@@ -257,7 +257,7 @@ void Method::LoadPoint()
 
       while (!input.eof()) {
         size_t nextPosition = 0;
-        std::vector<double> currentPoint(parameters.Dimension);
+        std::vector<double> currentPoint(pTask.GetNumberOfContinuousVariable());
         double curVal;
         int s = currentLine.size();
         input.getline(&currentLine[0], currentLine.size());
@@ -277,7 +277,7 @@ void Method::LoadPoint()
 
         currentPoint[0] = std::stod(curStr, &nextPosition);
 
-        for (int iDim = 1; iDim < parameters.Dimension; iDim++)
+        for (int iDim = 1; iDim < pTask.GetNumberOfContinuousVariable(); iDim++)
         {
           curStr = curStr.substr(nextPosition);
           currentPoint[iDim] = std::stod(curStr, &nextPosition);
@@ -310,7 +310,7 @@ void Method::LoadPoint()
       for (int i = 0; i < numberLoadedPoints; i++)
       {
         newPoint[i] = TrialFactory::CreateTrial();
-        for (int iDim = 0; iDim < parameters.Dimension; iDim++)
+        for (int iDim = 0; iDim < pTask.GetNumberOfContinuousVariable(); iDim++)
         {
           newPoint[i]->y[iDim] = points[i][iDim];
         }
@@ -380,7 +380,7 @@ void Method::FirstIteration()
     //====================================================================
     if ((parameters.IsCalculationInBorderPoint == true) || (parameters.LocalTuningType != 0))
     {
-      //if (parameters.Dimension == 1)
+      //if (pTask.GetNumberOfContinuousVariable() == 1)
       {
         // Эта функция вызывается только в листе дерева - поэтому вычисляем функционалы здесь
         for (int j = 0; j < pTask.GetNumOfFunc(); j++)
@@ -533,7 +533,7 @@ void Method::FirstIteration()
         iteration.pCurTrials[ind] = TrialFactory::CreateTrial();
         pData->GetTrials().push_back(iteration.pCurTrials[ind]);
 
-        for (size_t iCNP = 0; iCNP < parameters.Dimension; iCNP++)
+        for (size_t iCNP = 0; iCNP < pTask.GetNumberOfContinuousVariable(); iCNP++)
         {
           iteration.pCurTrials[ind]->y[iCNP] = pTask.GetA()[iCNP] + ((double(q) + 1.0) * h) * (pTask.GetB()[iCNP] - pTask.GetA()[iCNP]);
         }
@@ -668,7 +668,7 @@ bool Method::CheckStopCondition()
       if (pTask.getProblem()->GetAllOptimumPoint(allOptimumPoints, numOfOptima) ==
         IProblem::UNDEFINED)
       {
-        for (int i = 0; i < parameters.Dimension; i++)
+        for (int i = 0; i < pTask.GetNumberOfContinuousVariable(); i++)
         {
           double fabsx = fabs(pData->GetBestTrial()->y[i] - pTask.GetOptimumPoint()[i]);
           double fm = parameters.Epsilon * (pTask.GetB()[i] - pTask.GetA()[i]);
@@ -683,16 +683,16 @@ bool Method::CheckStopCondition()
       {
         for (int j = 0; j < numOfOptima; j++)
         {
-          for (int i = 0; i < parameters.Dimension; i++)
+          for (int i = 0; i < pTask.GetNumberOfContinuousVariable(); i++)
           {
-            double fabsx = fabs(pData->GetBestTrial()->y[i] - allOptimumPoints[parameters.Dimension * j + i]);
+            double fabsx = fabs(pData->GetBestTrial()->y[i] - allOptimumPoints[pTask.GetNumberOfContinuousVariable() * j + i]);
             double fm = parameters.Epsilon * (pTask.GetB()[i] - pTask.GetA()[i]);
             if (fabsx > fm)
             {
               res = false;
               break;
             }
-            if (i == parameters.Dimension - 1)
+            if (i == pTask.GetNumberOfContinuousVariable() - 1)
             {
               res = true;
             }
@@ -778,6 +778,10 @@ void Method::CalculateFunctionals()
   {
     if (outputSet.trials[i] == 0)
       iteration.pCurTrials[i] = 0;
+    else if (parameters.TypeCalculation == AsyncMPI)
+    {
+      iteration.pCurTrials[i] = outputSet.trials[i];
+    }
   }
 
   for (int j = 0; j < pTask.GetNumOfFunc(); j++)
@@ -820,7 +824,7 @@ void Method::InsertLocalPoints(const std::vector<Trial*>& points, Task* task)
       points[j]->K = 1;
 
     SearchInterval* p = pData->InsertPoint(CoveringInterval, *currentPoint,
-      iteration.IterationCount, parameters.Dimension);
+      iteration.IterationCount, pTask.GetNumberOfContinuousVariable());
 
     UpdateOptimumEstimation(*currentPoint);
 
@@ -892,7 +896,7 @@ void Method::InsertPoints(const std::vector<Trial*>& points)
       throw EXCEPTION("Wrong covering interval");
 
     SearchInterval* p = pData->InsertPoint(CoveringInterval, *currentPoint,
-      iteration.IterationCount, parameters.Dimension);
+      iteration.IterationCount, pTask.GetNumberOfContinuousVariable());
 
     UpdateOptimumEstimation(*currentPoint);
 
@@ -902,7 +906,7 @@ void Method::InsertPoints(const std::vector<Trial*>& points)
       CalculateM(CoveringInterval);
       this->iteration.IterationCount++;
     }
-    
+
   }
 }
 
@@ -1070,16 +1074,16 @@ void Method::CalculateM(SearchInterval* p)
         ++i;
       //Если обнаружили точку с большим или равным индексом, то вычисляем оценку константы
       if (i != NULL && p->izl() <= i->izl() && IsIntervalInSegment(p, (*i)))
-        UpdateM(fabs(i->z()[p->izl()] - p->zl()) / root(i->xl() - p->xl(), parameters.Dimension), p->izl(), boundaryStatus, p);
-    // Просмотр влево до обнаружения точки с большим или равным индексом,
-    // или до левой границы интервала поиска
+        UpdateM(fabs(i->z()[p->izl()] - p->zl()) / root(i->xl() - p->xl(), pTask.GetNumberOfContinuousVariable()), p->izl(), boundaryStatus, p);
+      // Просмотр влево до обнаружения точки с большим или равным индексом,
+      // или до левой границы интервала поиска
       i = pData->GetIterator(p);
       --i;
       while (i != NULL && p->izl() > i->izl() && IsIntervalInSegment(p, (*i)))
         --i;
       //Если обнаружили точку с большим или равным индексом, то вычисляем оценку константы
       if (i != NULL && p->izl() <= i->izl() && IsIntervalInSegment(p, (*i)))
-        UpdateM(fabs(i->z()[p->izl()] - p->zl()) / root(p->xl() - i->xl(), parameters.Dimension), p->izl(), boundaryStatus, p);
+        UpdateM(fabs(i->z()[p->izl()] - p->zl()) / root(p->xl() - i->xl(), pTask.GetNumberOfContinuousVariable()), p->izl(), boundaryStatus, p);
     }
     else
     {
@@ -1146,7 +1150,7 @@ SearchInterval* Method::AddCurrentPoint(Trial& pCurTrialsj, SearchInterval* Best
   }
 
   // Гельдеровская длина интервала
-  NewInterval->delta = root(NewInterval->xr() - NewInterval->xl(), parameters.Dimension);
+  NewInterval->delta = root(NewInterval->xr() - NewInterval->xl(), pTask.GetNumberOfContinuousVariable());
 
   // Корректируем существующий интервал
   (BestIntervalsj)->RightPoint = NewInterval->LeftPoint;
@@ -1158,9 +1162,9 @@ SearchInterval* Method::AddCurrentPoint(Trial& pCurTrialsj, SearchInterval* Best
     AchievedAccuracy = (BestIntervalsj)->delta;
   }
   // После чего вычисляем новую гельдеровскую длину лучшего интервала
-  (BestIntervalsj)->delta = root((BestIntervalsj)->xr() - (BestIntervalsj)->xl(), parameters.Dimension);
-  //(BestIntervalsj)->delta = root((BestIntervalsj)->xr() - (BestIntervalsj)->xl(), parameters.Dimension);
-  //    (*BestIntervalsj)->delta = pow((*BestIntervalsj)->dx,1.0/parameters.Dimension);
+  (BestIntervalsj)->delta = root((BestIntervalsj)->xr() - (BestIntervalsj)->xl(), pTask.GetNumberOfContinuousVariable());
+  //(BestIntervalsj)->delta = root((BestIntervalsj)->xr() - (BestIntervalsj)->xl(), pTask.GetNumberOfContinuousVariable());
+  //    (*BestIntervalsj)->delta = pow((*BestIntervalsj)->dx,1.0/pTask.GetNumberOfContinuousVariable());
 
   int j = BestIntervalsj->izr();
   if (BestIntervalsj->izl() > j)
@@ -1339,7 +1343,7 @@ IterationType Method::GetIterationType(int iterationNumber, int LocalMixParamete
 }
 
 // ------------------------------------------------------------------------------------------------
-int Method::IsBoundary(SearchInterval* p) 
+int Method::IsBoundary(SearchInterval* p)
 {
   int ans = 0;
   if (p->izl() == -2)
@@ -1444,7 +1448,7 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
         ++i;
       if (i != NULL && p->izl() == i->izl() && IsIntervalInSegment(p, (*i)) && p->izl() == j)
       {
-        temp = fabs(i->z()[p->izl()] - p->zl()) / root(i->xl() - p->xl(), parameters.Dimension);
+        temp = fabs(i->z()[p->izl()] - p->zl()) / root(i->xl() - p->xl(), pTask.GetNumberOfContinuousVariable());
         if (temp > mu[j])
           mu[j] = temp;
       }
@@ -1455,7 +1459,7 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
         --i;
       if (i != NULL && p->izl() == i->izl() && IsIntervalInSegment(p, (*i)) && p->izl() == j)
       {
-        temp = fabs(i->z()[p->izl()] - p->zl()) / root(p->xl() - i->xl(), parameters.Dimension);
+        temp = fabs(i->z()[p->izl()] - p->zl()) / root(p->xl() - i->xl(), pTask.GetNumberOfContinuousVariable());
         if (temp > mu[j])
           mu[j] = temp;
       }
@@ -1544,7 +1548,7 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
     if (newValue > mu[0]) {
       mu[0] = newValue;
     }
-    Xm = p->delta;//pow(p->delta, parameters.Dimension);
+    Xm = p->delta;//pow(p->delta, pTask.GetNumberOfContinuousVariable());
 
     if (isSearchXMax)
     {
@@ -1566,7 +1570,7 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
         Xmax[0] = Xm;
       }
     }
-    gamma = (mu[0] * p->delta) / Xmax[0];//pow(Xmax, 1. / parameters.Dimension);
+    gamma = (mu[0] * p->delta) / Xmax[0];//pow(Xmax, 1. / pTask.GetNumberOfContinuousVariable());
     //gamma = mu;
 
     //Запоминаем конечное мю
@@ -1649,7 +1653,7 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
     if (newValue > mu[0]) {
       mu[0] = newValue;
     }
-    Xm = p->delta;//pow(p->delta, parameters.Dimension);
+    Xm = p->delta;//pow(p->delta, pTask.GetNumberOfContinuousVariable());
 
     if (isSearchXMax)
     {
@@ -1671,7 +1675,7 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
         Xmax[0] = Xm;
       }
     }
-    gamma = (mu[0] * p->delta) / Xmax[0];//pow(Xmax, 1. / parameters.Dimension);
+    gamma = (mu[0] * p->delta) / Xmax[0];//pow(Xmax, 1. / pTask.GetNumberOfContinuousVariable());
 
     //Запоминаем конечное мю
     if (parameters.LtXi > pData->M[index] || pData->M[index] == 1.0 && newValue > _M_ZERO_LEVEL) {
@@ -1687,7 +1691,7 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
     }
 
     //H = fabs(p->zr() - p->zl()) / (p->xr() - p->xl());
-    H = newValue / pow(p->delta, parameters.Dimension - 1);
+    H = newValue / pow(p->delta, pTask.GetNumberOfContinuousVariable() - 1);
 
     if (H > pData->M[index]) {
       pData->M[index] = H;
@@ -1889,7 +1893,7 @@ void Method::HookeJeevesMethod(Trial& point, std::vector<Trial*>& localPoints)
   double initialStep = 0;
   for (int i = 0; i < pTask.GetN(); i++)
     initialStep += pTask.GetB()[i] - pTask.GetA()[i];
-  initialStep /= parameters.Dimension;
+  initialStep /= pTask.GetNumberOfContinuousVariable();
   // начальный шаг равен среднему размеру стороны гиперкуба, умноженному на коэффициент
   localMethod->SetEps(parameters.LocalVerificationEpsilon);
   localMethod->SetInitialStep(0.07 * initialStep);
@@ -1978,7 +1982,7 @@ void Method::LocalSearch()
     double initialStep = 0;
     for (int i = 0; i < pTask.GetN(); i++)
       initialStep += pTask.GetB()[i] - pTask.GetA()[i];
-    initialStep /= parameters.Dimension;
+    initialStep /= pTask.GetNumberOfContinuousVariable();
     // начальный шаг равен среднему размеру стороны гиперкуба, умноженному на коэффициент
     localMethod->SetEps(parameters.LocalVerificationEpsilon);
 

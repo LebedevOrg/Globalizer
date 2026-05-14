@@ -186,6 +186,12 @@ void Task::CalculateFuncsInManyPoints(double* y, int fNumber, int numPoints, dou
 }
 
 // ------------------------------------------------------------------------------------------------
+int Task::GetNumberOfContinuousVariable()
+{
+	return GetN() - GetNumberOfDiscreteVariable();
+}
+
+// ------------------------------------------------------------------------------------------------
 int Task::GetNumberOfDiscreteVariable()
 {
   IIntegerProgrammingProblem* newProblem = dynamic_cast<IIntegerProgrammingProblem*>(pProblem);

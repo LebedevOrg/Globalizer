@@ -211,6 +211,13 @@ public:
   virtual void CalculateFuncsInManyPoints(double* y, int fNumber, int numPoints, double* values);
 
   /**
+  * \brief Возвращает число непрерывных параметров.
+  * \details Непрерывные параметры всегда в начале в векторе y.
+  * \return Число непрерывных переменных
+  */
+  virtual int GetNumberOfContinuousVariable();
+
+  /**
   * \brief Возвращает число дискретных параметров.
   * \details Дискретные параметры всегда последние в векторе y.
   * \return Число дискретных переменных или 0, если задача не является целочисленной.

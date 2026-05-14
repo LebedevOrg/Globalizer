@@ -45,7 +45,7 @@ pData(&data), pTask(&task)
 {
   isFirstRun = true;
 
-  pEvolvent = EvolventFactory::CreateEvolvent(parameters.Dimension, parameters.m);
+  pEvolvent = EvolventFactory::CreateEvolvent(pTask->GetNumberOfContinuousVariable(), parameters.m);
 
   calculation = CalculationFactory::CreateCalculation(*pTask, pEvolvent);
 
@@ -130,8 +130,6 @@ void Process::Solve()
 
   }
 
-
-
   EndIterations();
 
   duration = Timer.GetTime();
@@ -157,24 +155,7 @@ void Process::Reset(SearchData* data, Task* task)
   pTask = task;
   if (pEvolvent == 0)
   {
-      //Task* _pTask = TaskFactory::CreateTask(_problem, 0);
-
-      pEvolvent = EvolventFactory::CreateEvolvent(parameters.Dimension, parameters.m);
-
-      /*if (parameters.MapType == mpBase)
-          evolvent = new Evolvent(Factory);
-      else if (parameters.MapType == mpLinar)
-          evolvent = new LinearEvolvent(parameters.Dimension, parameters.m);
-      else if (parameters.MapType == mpNoninjective)
-          evolvent = new NoninjectiveEvolvent(parameters.Dimension, parameters.m);
-      else if (parameters.MapType == mpRotated)
-          evolvent = new RotatedEvolvent(parameters.Dimension, parameters.m);
-      else if (parameters.MapType == mpShifted)
-          evolvent = new ShiftedEvolvent(parameters.Dimension, parameters.m);
-      else if (parameters.MapType == mpSmooth)
-          evolvent = new SmoothEvolvent(parameters.Dimension, parameters.m);
-    else
-      throw EXCEPTION("Unknown type of evolvent");*/
+      pEvolvent = EvolventFactory::CreateEvolvent(pTask->GetNumberOfContinuousVariable(), parameters.m);
   }
   if (calculation == 0)
     calculation = CalculationFactory::CreateCalculation(*pTask, pEvolvent);

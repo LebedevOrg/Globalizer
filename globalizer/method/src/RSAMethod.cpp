@@ -90,10 +90,10 @@ Method_RSA::Method_RSA(Task& _pTask, SearchData& _pData,
     //===========================================================================================================================================
 
 
-    if (parameters.Dimension == 1)
+    if (pTask.GetNumberOfContinuousVariable() == 1)
         StartLocalIteration = 5;
     else
-        StartLocalIteration = parameters.Dimension * 70 / parameters.NumPoints;
+        StartLocalIteration = pTask.GetNumberOfContinuousVariable() * 70 / parameters.NumPoints;
 
     functionCalculationCount.resize(pTask.GetNumOfFunc());
     for (int i = 0; i < pTask.GetNumOfFunc(); i++)
@@ -167,7 +167,7 @@ double Method_RSA::Update_r(int iter, int procLevel)
     if (iterationCount <= 0)
         iterationCount = 1;
 
-    double p = 1.0 / parameters.Dimension;
+    double p = 1.0 / pTask.GetNumberOfContinuousVariable();
     double resR = baseR + parameters.rDynamic / pow(iterationCount, p);
 
     return resR;
@@ -241,7 +241,7 @@ void Method_RSA::LoadPoint()
 
             while (!input.eof()) {
                 size_t nextPosition = 0;
-                std::vector<double> currentPoint(parameters.Dimension);
+                std::vector<double> currentPoint(pTask.GetNumberOfContinuousVariable());
                 double curVal;
                 int s = currentLine.size();
                 input.getline(&currentLine[0], currentLine.size());
@@ -261,7 +261,7 @@ void Method_RSA::LoadPoint()
 
                 currentPoint[0] = std::stod(curStr, &nextPosition);
 
-                for (int iDim = 1; iDim < parameters.Dimension; iDim++)
+                for (int iDim = 1; iDim < pTask.GetNumberOfContinuousVariable(); iDim++)
                 {
                     curStr = curStr.substr(nextPosition);
                     currentPoint[iDim] = std::stod(curStr, &nextPosition);
@@ -294,7 +294,7 @@ void Method_RSA::LoadPoint()
             for (int i = 0; i < numberLoadedPoints; i++)
             {
                 newPoint[i] = TrialFactory::CreateTrial();
-                for (int iDim = 0; iDim < parameters.Dimension; iDim++)
+                for (int iDim = 0; iDim < pTask.GetNumberOfContinuousVariable(); iDim++)
                 {
                     newPoint[i]->y[iDim] = points[i][iDim];
                 }
@@ -364,7 +364,7 @@ void Method_RSA::FirstIteration()
         //====================================================================
         if ((parameters.IsCalculationInBorderPoint == true) || (parameters.LocalTuningType != 0))
         {
-            //if (parameters.Dimension == 1)
+            //if (pTask.GetNumberOfContinuousVariable() == 1)
             {
                 // Эта функция вызывается только в листе дерева - поэтому вычисляем функционалы здесь
                 for (int j = 0; j < pTask.GetNumOfFunc(); j++)
@@ -516,7 +516,7 @@ void Method_RSA::FirstIteration()
                 iteration.pCurTrials[ind] = TrialFactory::CreateTrial();
                 pData->GetTrials().push_back(iteration.pCurTrials[ind]);
 
-                for (size_t iCNP = 0; iCNP < parameters.Dimension; iCNP++)
+                for (size_t iCNP = 0; iCNP < pTask.GetNumberOfContinuousVariable(); iCNP++)
                 {
                     iteration.pCurTrials[ind]->y[iCNP] = pTask.GetA()[iCNP] + ((double(q) + 1.0) * h) * (pTask.GetB()[iCNP] - pTask.GetA()[iCNP]);
                 }
@@ -751,7 +751,7 @@ void Method_RSA::InsertLocalPoints(const std::vector<Trial*>& points, Task* task
             points[j]->K = 1;
 
         SearchInterval* p = pData->InsertPoint(CoveringInterval, *currentPoint,
-            iteration.IterationCount, parameters.Dimension);
+            iteration.IterationCount, pTask.GetNumberOfContinuousVariable());
 
         UpdateOptimumEstimation(*currentPoint);
 
@@ -819,7 +819,7 @@ void Method_RSA::InsertPoints(const std::vector<Trial*>& points)
             throw EXCEPTION("Wrong covering interval");
 
         SearchInterval* p = pData->InsertPoint(CoveringInterval, *currentPoint,
-            iteration.IterationCount, parameters.Dimension);
+            iteration.IterationCount, pTask.GetNumberOfContinuousVariable());
 
         UpdateOptimumEstimation(*currentPoint);
 
@@ -1016,7 +1016,7 @@ SearchInterval* Method_RSA::AddCurrentPoint(Trial& pCurTrialsj, SearchInterval* 
     }
 
     // Гельдеровская длина интервала
-    NewInterval->delta = root(NewInterval->xr() - NewInterval->xl(), parameters.Dimension);
+    NewInterval->delta = root(NewInterval->xr() - NewInterval->xl(), pTask.GetNumberOfContinuousVariable());
 
     // Корректируем существующий интервал
     (BestIntervalsj)->RightPoint = NewInterval->LeftPoint;
@@ -1028,9 +1028,9 @@ SearchInterval* Method_RSA::AddCurrentPoint(Trial& pCurTrialsj, SearchInterval* 
         AchievedAccuracy = (BestIntervalsj)->delta;
     }
     // После чего вычисляем новую гельдеровскую длину лучшего интервала
-    (BestIntervalsj)->delta = root((BestIntervalsj)->xr() - (BestIntervalsj)->xl(), parameters.Dimension);
-    //(BestIntervalsj)->delta = root((BestIntervalsj)->xr() - (BestIntervalsj)->xl(), parameters.Dimension);
-    //    (*BestIntervalsj)->delta = pow((*BestIntervalsj)->dx,1.0/parameters.Dimension);
+    (BestIntervalsj)->delta = root((BestIntervalsj)->xr() - (BestIntervalsj)->xl(), pTask.GetNumberOfContinuousVariable());
+    //(BestIntervalsj)->delta = root((BestIntervalsj)->xr() - (BestIntervalsj)->xl(), pTask.GetNumberOfContinuousVariable());
+    //    (*BestIntervalsj)->delta = pow((*BestIntervalsj)->dx,1.0/pTask.GetNumberOfContinuousVariable());
 
     int j = BestIntervalsj->izr();
     if (BestIntervalsj->izl() > j)
@@ -1085,7 +1085,7 @@ void Method_RSA::RenewSearchData()
         SearchInterval* interval;
 
         if (parameters.MapType == mpNoninjective) {
-            Extended* x_ = new Extended[1 << parameters.Dimension];
+            Extended* x_ = new Extended[1 << pTask.GetNumberOfContinuousVariable()];
             int kpp = evolvent.GetNoninjectivePreimages(iteration.pCurTrials[j]->y, x_);
 
             std::vector<Trial*> tmp(kpp+1);
@@ -1494,7 +1494,7 @@ void Method_RSA::HookeJeevesMethod(Trial& point, std::vector<Trial*>& localPoint
     double initialStep = 0;
     for (int i = 0; i < pTask.GetN(); i++)
         initialStep += pTask.GetB()[i] - pTask.GetA()[i];
-    initialStep /= parameters.Dimension;
+    initialStep /= pTask.GetNumberOfContinuousVariable();
     // начальный шаг равен среднему размеру стороны гиперкуба, умноженному на коэффициент
     localMethod->SetEps(parameters.LocalVerificationEpsilon);
     localMethod->SetInitialStep(0.07 * initialStep);
@@ -1583,7 +1583,7 @@ void Method_RSA::LocalSearch()
         double initialStep = 0;
         for (int i = 0; i < pTask.GetN(); i++)
             initialStep += pTask.GetB()[i] - pTask.GetA()[i];
-        initialStep /= parameters.Dimension;
+        initialStep /= pTask.GetNumberOfContinuousVariable();
         // начальный шаг равен среднему размеру стороны гиперкуба, умноженному на коэффициент
         localMethod->SetEps(parameters.LocalVerificationEpsilon);
 

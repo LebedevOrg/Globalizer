@@ -24,15 +24,11 @@
 #include "Performance.h"
 #include "ProblemInterface.h"
 #include "EvolventInterface.h"
-//#include "TLinearEvolvent.h"
-//#include "TNoninjectiveEvolvent.h"
-//#include "TRotatedEvolvent.h"
-//#include "TShiftedEvolvent.h"
-//#include "TSmoothEvolvent.h"
+
 #include "CalculationFactory.h"
 
 class Solver;
-//extern const int MaxNumOfTaskLevels;
+
 
 // ------------------------------------------------------------------------------------------------
 class Process
