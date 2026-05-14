@@ -56,6 +56,8 @@ Solver::Solver(IProblem* problem)
 
   addPoints = nullptr;
 
+  m_initialized = false;
+
   // Настраиваем параметры
   AutoConfig();
 }
@@ -66,6 +68,115 @@ Solver::Solver(IGlobalOptimizationProblem* problem) : Solver::Solver(new Globali
 {
 }
 #endif
+
+// ------------------------------------------------------------------------------------------------
+int Solver::Initialize()
+{
+  try
+  {
+    if (m_initialized) return 0;
+
+    parameters.FileSerializer = "../result.json";
+    if (CheckParameters()) return 1;
+
+    if ((parameters.CalculationsArray[0] == MPI_calc) && (parameters.GetProcNum() > 1) && (parameters.GetProcRank() > 0))
+    {
+      MpiCalculation();
+      m_initialized = true;
+      return 0;
+    }
+    if ((parameters.TypeCalculation == AsyncMPI) && (parameters.GetProcNum() > 1) && (parameters.GetProcRank() > 0))
+    {
+      AsyncCalculation();
+      m_initialized = true;
+      return 0;
+    }
+    ClearData();
+    CreateProcess();
+    if (addPoints != nullptr)
+      mProcess->InsertPoints(*addPoints);
+
+    if (mProcess->isFirstRun)
+      mProcess->BeginIterations();
+
+    m_initialized = true;
+    return 0;
+  }
+  catch (const Exception& e)
+  {
+    std::string excFileName = std::string("exception_init_") + toString(parameters.GetProcRank()) + ".txt";
+    e.Print(excFileName.c_str());
+    for (int i = 0; i < parameters.GetProcNum(); i++)
+      if (i != parameters.GetProcRank())
+        MPI_Abort(MPI_COMM_WORLD, i);
+    return 1;
+  }
+  catch (...)
+  {
+    print << "\nUNKNOWN EXCEPTION in Initialize()!!!\n";
+    std::string excFileName = std::string("exception_init_") + toString(parameters.GetProcRank()) + ".txt";
+    Exception e("UNKNOWN", -1, "Initialize", "Unknown error");
+    e.Print(excFileName.c_str());
+    for (int i = 0; i < parameters.GetProcNum(); i++)
+      if (i != parameters.GetProcRank())
+        MPI_Abort(MPI_COMM_WORLD, i);
+    return 1;
+  }
+}
+
+// ------------------------------------------------------------------------------------------------
+int Solver::DoIteration(bool& finished)
+{
+  finished = false;
+
+  if (!m_initialized) return 1; 
+  if (!mProcess || mProcess->IsOptimumFound)
+  {
+    finished = true;
+    return 0;
+  }
+
+  try 
+  {
+    mProcess->DoIteration();
+
+    if (mProcess->IsOptimumFound)
+    {
+      finished = true;
+      if (parameters.GetProcRank() == 0 && parameters.GetProcNum() > 1)
+      {
+        for (int i = 1; i < parameters.GetProcNum(); i++)
+        {
+          int finish = 1;
+          MPI_Send(&finish, 1, MPI_INT, i, TagChildSolved, MPI_COMM_WORLD);
+        }
+      }
+      mProcess->EndIterations();
+    }
+
+    return 0;
+  }
+  catch (const Exception& e)
+  {
+    std::string excFileName = std::string("exception_step_") + toString(parameters.GetProcRank()) + ".txt";
+    e.Print(excFileName.c_str());
+    for (int i = 0; i < parameters.GetProcNum(); i++)
+      if (i != parameters.GetProcRank())
+        MPI_Abort(MPI_COMM_WORLD, i);
+    return 1;
+  }
+  catch (...)
+  {
+    print << "\nUNKNOWN EXCEPTION in DoIteration()!!!\n";
+    std::string excFileName = std::string("exception_step_") + toString(parameters.GetProcRank()) + ".txt";
+    Exception e("UNKNOWN", -1, "DoIteration", "Unknown error");
+    e.Print(excFileName.c_str());
+    for (int i = 0; i < parameters.GetProcNum(); i++)
+      if (i != parameters.GetProcRank())
+        MPI_Abort(MPI_COMM_WORLD, i);
+    return 1;
+  }
+}
 
 // ------------------------------------------------------------------------------------------------
 int Solver::CheckParameters()

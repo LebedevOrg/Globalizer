@@ -31,11 +31,14 @@
 //#include "TSmoothEvolvent.h"
 #include "CalculationFactory.h"
 
+class Solver;
 //extern const int MaxNumOfTaskLevels;
 
 // ------------------------------------------------------------------------------------------------
 class Process
 {
+  friend class Solver;
+
 protected:
   /// Печатать ли выходную информацию
   bool isPrintOptimEstimation;
