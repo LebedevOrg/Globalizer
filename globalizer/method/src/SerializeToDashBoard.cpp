@@ -255,64 +255,170 @@ bool SerializeToDashBoard::SaveFullState(const std::string& filename,
   return false;
 }
 
-
 // ------------------------------------------------------------------------------------------------
 bool SerializeToDashBoard::LoadFromFile(const std::string& filename,
   std::vector<Trial*>& outTrials,
-  Trial*& outBestTrial)
+  Trial*& outBestTrial,
+  Task* pTask)
 {
   try
   {
     std::ifstream file(filename);
+    if (!file.is_open())
+      return false;
+
     json jRoot = json::parse(file);
 
-    // Загрузка точек испытаний
-    if (jRoot.contains("SearchDataItem"))
+    // Получаем количество непрерывных и дискретных переменных если задача задана
+    int numCont = 0;
+    int numDiscr = 0;
+
+#ifdef _GLOBALIZER_BENCHMARKS
+    GlobalizerBenchmarksProblem* gbProblem = nullptr;
+#endif
+
+    if (pTask != nullptr)
     {
-      for (const auto& jTrial : jRoot["SearchDataItem"])
+      numCont = pTask->GetNumberOfContinuousVariable();
+      numDiscr = pTask->GetNumberOfDiscreteVariable();
+
+#ifdef _GLOBALIZER_BENCHMARKS
+      gbProblem = dynamic_cast<GlobalizerBenchmarksProblem*>(pTask->getProblem());
+#endif
+    }
+
+    // Определяем формат файла:
+    // "новый" формат (SaveFullState) использует "SearchDataItem" и "best_trials"
+    // "старый" формат (qqq.json)     использует "trials"          и "best_trial"
+    const bool isNewFormat = jRoot.contains("SearchDataItem");
+    const bool isOldFormat = jRoot.contains("trials");
+
+    // ----------------------------------------------------------------
+    // Лямбда для загрузки одного испытания из json
+    // ----------------------------------------------------------------
+    auto LoadTrialFromJson = [&](const json& jTrial) -> Trial*
       {
         Trial* trial = TrialFactory::CreateTrial();
 
-        // Загрузка координат
-        auto floatVars = jTrial["float_variables"];
-        for (size_t i = 0; i < floatVars.size(); ++i)
-          trial->y[i] = floatVars[i];
+        // ---- Координаты ------------------------------------------------
+        if (isNewFormat && jTrial.contains("float_variables"))
+        {
+          // Новый формат: "float_variables": [x0, x1, x2, ...]
+          const auto& floatVars = jTrial["float_variables"];
+          for (size_t i = 0; i < floatVars.size(); ++i)
+            trial->y[i] = floatVars[i].get<double>();
+        }
+        else if (jTrial.contains("y"))
+        {
+          // Старый формат: "y": [x0, x1, x2, ...]
+          const auto& yArr = jTrial["y"];
+          for (size_t i = 0; i < yArr.size(); ++i)
+            trial->y[i] = yArr[i].get<double>();
+        }
 
-        // Загрузка значений функций
-        auto funcValues = jTrial["function_values"];
-        for (size_t i = 0; i < funcValues.size(); ++i)
-          trial->FuncValues[i] = funcValues[i]["value"];
+        // ---- Дискретные переменные -------------------------------------
+        if (isNewFormat && jTrial.contains("discrete_variables") && numDiscr > 0)
+        {
+          const auto& discrVars = jTrial["discrete_variables"];
 
-        // Дополнительные параметры
-        trial->SetX(Extended(jTrial["x"].get<double>()));
-        trial->index = jTrial["index"];
-        trial->discreteValuesIndex = jTrial["discrete_value_index"];
-        trial->iterationNumber = jTrial["iterationNumber"];
-        trial->creationTime = jTrial["creation_time"];
+#ifdef _GLOBALIZER_BENCHMARKS
+          if (gbProblem != nullptr && !discrVars.empty() && discrVars[0].is_string())
+          {
+            std::vector<std::string> u;
+            for (size_t i = 0; i < discrVars.size(); ++i)
+              u.push_back(discrVars[i].get<std::string>());
 
-        outTrials.push_back(trial);
-      }
+            std::vector<double> y(trial->y, trial->y + numCont);
+            gbProblem->YUtoX(y, u, trial->y);
+          }
+          else
+#endif
+          {
+            for (size_t i = 0; i < discrVars.size(); ++i)
+              trial->y[numCont + i] = discrVars[i].get<double>();
+          }
+        }
+
+        // ---- Значения функций ------------------------------------------
+        if (isNewFormat && jTrial.contains("function_values"))
+        {
+          // Новый формат: "function_values": [{"value": 1.23, ...}, ...]
+          const auto& funcValues = jTrial["function_values"];
+          for (size_t i = 0; i < funcValues.size(); ++i)
+            trial->FuncValues[i] = funcValues[i]["value"].get<double>();
+        }
+        else if (jTrial.contains("FuncValues"))
+        {
+          // Старый формат: "FuncValues": [1.23, null, ...]
+          const auto& funcValues = jTrial["FuncValues"];
+          for (size_t i = 0; i < funcValues.size(); ++i)
+          {
+            if (funcValues[i].is_null())
+              trial->FuncValues[i] = std::numeric_limits<double>::quiet_NaN();
+            else
+              trial->FuncValues[i] = funcValues[i].get<double>();
+          }
+        }
+
+        // ---- Координата x ----------------------------------------------
+        if (jTrial.contains("x"))
+          trial->SetX(Extended(jTrial["x"].get<double>()));
+
+        // ---- index -----------------------------------------------------
+        if (jTrial.contains("index"))
+          trial->index = jTrial["index"].get<int>();
+
+        // ---- discreteValuesIndex / discrete_value_index ----------------
+        if (jTrial.contains("discrete_value_index"))
+          trial->discreteValuesIndex = jTrial["discrete_value_index"].get<int>();
+        else if (jTrial.contains("discreteValuesIndex"))
+          trial->discreteValuesIndex = jTrial["discreteValuesIndex"].get<int>();
+
+        // ---- K ---------------------------------------------------------
+        if (jTrial.contains("K"))
+          trial->K = jTrial["K"].get<int>();
+
+        // ---- TypeColor -------------------------------------------------
+        if (jTrial.contains("TypeColor"))
+          trial->TypeColor = jTrial["TypeColor"].get<int>();
+
+        // ---- iterationNumber -------------------------------------------
+        if (jTrial.contains("iterationNumber"))
+          trial->iterationNumber = jTrial["iterationNumber"].get<int>();
+
+        // ---- creation_time ---------------------------------------------
+        if (jTrial.contains("creation_time"))
+          trial->creationTime = jTrial["creation_time"].get<double>();
+
+        return trial;
+      };
+
+    // ----------------------------------------------------------------
+    // Загрузка точек испытаний
+    // ----------------------------------------------------------------
+    if (isNewFormat && jRoot.contains("SearchDataItem"))
+    {
+      for (const auto& jTrial : jRoot["SearchDataItem"])
+        outTrials.push_back(LoadTrialFromJson(jTrial));
+    }
+    else if (isOldFormat)
+    {
+      for (const auto& jTrial : jRoot["trials"])
+        outTrials.push_back(LoadTrialFromJson(jTrial));
     }
 
-    // Загрузка лучших точек
-    if (jRoot.contains("best_trials") && !jRoot["best_trials"].empty())
+    // ----------------------------------------------------------------
+    // Загрузка лучшей точки
+    // ----------------------------------------------------------------
+    if (isNewFormat && jRoot.contains("best_trials") && !jRoot["best_trials"].empty())
     {
-      const auto& jBestTrial = jRoot["best_trials"][0];
-      outBestTrial = TrialFactory::CreateTrial();
-
-      auto floatVars = jBestTrial["float_variables"];
-      for (size_t i = 0; i < floatVars.size(); ++i)
-        outBestTrial->y[i] = floatVars[i];
-
-      auto funcValues = jBestTrial["function_values"];
-      for (size_t i = 0; i < funcValues.size(); ++i)
-        outBestTrial->FuncValues[i] = funcValues[i]["value"];
-
-      outBestTrial->SetX(Extended(jBestTrial["x"].get<double>()));
-      outBestTrial->index = jBestTrial["index"];
-      outBestTrial->discreteValuesIndex = jBestTrial["discrete_value_index"];
-      outBestTrial->iterationNumber = jBestTrial["iterationNumber"];
-      outBestTrial->creationTime = jBestTrial["creation_time"];
+      // Новый формат: "best_trials": [{...}, ...]
+      outBestTrial = LoadTrialFromJson(jRoot["best_trials"][0]);
+    }
+    else if (jRoot.contains("best_trial") && !jRoot["best_trial"].is_null())
+    {
+      // Старый формат: "best_trial": {...}
+      outBestTrial = LoadTrialFromJson(jRoot["best_trial"]);
     }
 
     return true;
@@ -321,7 +427,6 @@ bool SerializeToDashBoard::LoadFromFile(const std::string& filename,
   {
     return false;
   }
-  return false;
 }
 
 // ------------------------------------------------------------------------------------------------

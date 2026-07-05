@@ -23,6 +23,7 @@
 #include "TrialFactory.h"
 #include "CalculationFactory.h"
 #include "ParallelHookeJeevesMethod.h"
+#include "SerializeToDashBoard.h"
 
 #include "OMPCalculation.h"
 
@@ -228,11 +229,39 @@ void Method::LoadPoint()
   SearchDataSerializer::LoadedFileData fd;
   if (pointsPathExtension == "json")
   {
-    parameters.serializer->LoadFromFile(pointsPath, fd);
-    newPoint = fd.trials;
-    numberLoadedPoints = newPoint.size();
-    for (auto trial : newPoint)
-      pData->GetTrials().push_back(trial);
+    if (parameters.IsSerializeToDashBoard)
+    {
+      SerializeToDashBoard dashBoardSerializer;
+      Trial* outBestTrial = nullptr;
+
+      bool loadResult = dashBoardSerializer.LoadFromFile(pointsPath, newPoint, outBestTrial, &pTask);
+
+      if (loadResult)
+      {
+        numberLoadedPoints = newPoint.size();
+        for (auto trial : newPoint)
+          pData->GetTrials().push_back(trial);
+
+        // Если загружена лучшая точка - обновляем оценку оптимума
+        if (outBestTrial != nullptr)
+        {
+          UpdateOptimumEstimation(*outBestTrial);
+        }
+      }
+      else
+      {
+        print << "SerializeToDashBoard::LoadFromFile failed to load file: " << pointsPath << "\n";
+      }
+    }
+    else
+    {
+      parameters.serializer->LoadFromFile(pointsPath, fd);
+      newPoint = fd.trials;
+      numberLoadedPoints = newPoint.size();
+
+      for (auto trial : newPoint)
+        pData->GetTrials().push_back(trial);
+    }
   }
   else
   {

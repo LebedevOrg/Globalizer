@@ -35,7 +35,8 @@ public:
   // Метод для загрузки состояния из файла
   bool LoadFromFile(const std::string& filename,
     std::vector<Trial*>& outTrials,
-    Trial*& outBestTrial);
+    Trial*& outBestTrial,
+    Task* pTask = nullptr);
 
   /** Расчитывает достигнутую точность при решении задачи
 *
