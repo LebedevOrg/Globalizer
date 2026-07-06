@@ -36,6 +36,7 @@ class PYProblem:
         # === ДИСКРЕТНЫЕ ПАРАМЕТРЫ ===
         self.discrete_variable_values = []
         self.discrete_variable_names = []
+        self.number_of_discrete_variables = 0
 
         if hasattr(problem, "discrete_variable_values"):
             self.discrete_variable_values = problem.discrete_variable_values
@@ -50,16 +51,22 @@ class PYProblem:
 
         # === НЕПРЕРЫВНЫЕ ПАРАМЕТРЫ ===
         # Получаем количество непрерывных переменных
-        if hasattr(problem, 'dimension'):
-            n_continuous = problem.dimension
+        if self.number_of_discrete_variables > 0:
+            if hasattr(problem, 'dimension'):
+                n_continuous = problem.dimension
+            else:
+                n_continuous = 2
+
+            print(f"DEBUG: n_continuous = {n_continuous}")
+
+            # Общая размерность для решателя
+            self._dimension = n_continuous + self.number_of_discrete_variables
+            print(f"DEBUG: total dimension for solver = {self._dimension}")
         else:
-            n_continuous = 2
-
-        print(f"DEBUG: n_continuous = {n_continuous}")
-
-        # Общая размерность для решателя
-        self._dimension = n_continuous + self.number_of_discrete_variables
-        print(f"DEBUG: total dimension for solver = {self._dimension}")
+            if hasattr(problem, "dimension"):
+                self._dimension = problem.dimension
+            else:
+                self._dimension = 2
 
         # === ГРАНИЦЫ (только для непрерывных) ===
         lower_bounds = None
@@ -85,8 +92,8 @@ class PYProblem:
             print(f"DEBUG: bounds set: {self._lower_bounds}, {self._upper_bounds}")
         else:
             # Дефолтные границы
-            self._lower_bounds = [-10.0] * n_continuous
-            self._upper_bounds = [10.0] * n_continuous
+            self._lower_bounds = [-10.0] * self._dimension
+            self._upper_bounds = [10.0] * self._dimension
             print(f"DEBUG: using default bounds: {self._lower_bounds}, {self._upper_bounds}")
 
         def wrapped_calculate(x):
@@ -94,24 +101,29 @@ class PYProblem:
             Обёртка для вызова метода calculate
             x - массив чисел от решателя
             """
-            # Разделяем непрерывные и дискретные переменные
-            n_cont = len(x) - self.number_of_discrete_variables
-            print(f"DEBUG: n_cont = {n_cont}, n_disc = {self.number_of_discrete_variables}, len(x) = {len(x)}")
+            if self.number_of_discrete_variables > 0:
+                # Разделяем непрерывные и дискретные переменные
+                n_cont = len(x) - self.number_of_discrete_variables
+                print(f"DEBUG: n_cont = {n_cont}, n_disc = {self.number_of_discrete_variables}, len(x) = {len(x)}")
 
-            float_vars = x[:n_cont]
-            discrete_indices = x[n_cont:]
+                float_vars = x[:n_cont]
+                discrete_indices = x[n_cont:]
 
-            # Преобразуем индексы в строковые значения
-            discrete_str = []
-            for i, idx in enumerate(discrete_indices):
-                idx_int = int(round(idx))
-                if self.discrete_variable_values and i < len(self.discrete_variable_values):
-                    if idx_int < len(self.discrete_variable_values[i]):
+                # Преобразуем индексы в строковые значения
+                discrete_str = []
+                for i, idx in enumerate(discrete_indices):
+                    idx_int = int(round(idx))
+
+                    if self.discrete_variable_values and i < len(self.discrete_variable_values):
+                        # Ограничиваем индекс
+                        max_idx = len(self.discrete_variable_values[i]) - 1
+                        idx_int = max(0, min(idx_int, max_idx))
                         discrete_str.append(self.discrete_variable_values[i][idx_int])
                     else:
                         discrete_str.append(str(idx_int))
-                else:
-                    discrete_str.append(str(idx_int))
+            else:
+                float_vars = list(x)
+                discrete_str = []
 
             # Создаём объект point
             point = type('Point', (), {

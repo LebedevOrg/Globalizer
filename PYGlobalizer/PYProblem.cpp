@@ -28,38 +28,6 @@ PYProblem::PYProblem(py::object data) {
   //}
 
   if (py::hasattr(data, "discrete_variable_values")) {
-      //get here!!!
-        /// Число значений дискретного параметра
-     //this->mNumberOfValues[i] = discrete_variable_values[i].size();
-     //перегрузить 
-     /// Возвращает число дискретных параметров, дискретные параметры всегда последние в векторе y
-     //virtual int GetNumberOfDiscreteVariable() = 0; +
-     /**
-     Возвращает число значений дискретного параметра discreteVariable.
-     GetDimension() возвращает общее число параметров.
-     (GetDimension() - GetNumberOfDiscreteVariable()) - номер начальной дискретной переменной
-     Для не дискретных переменных == -1
-     */
-     //virtual int GetNumberOfValues(int discreteVariable) = 0;+
-     /**
-     Определяет значения дискретного параметра с номером discreteVariable
-     Возвращает код ошибки.
-     \param[out] values массив, в который будут сохранены значения дискретного параметра
-     нулевой элемент это левая граница, поледний элемент это правая граница.
-     */
-     //virtual int GetAllDiscreteValues(int discreteVariable, double* values) = 0;+
-     /**
-     Определяет значения дискретного параметра с номером discreteVariable после номера previousNumber
-     Возвращает код ошибки.
-     \param[in] previousNumber - номер значения после которого возвращается значение
-     -2 - значение по умолчанию, возвращает следующее значение
-     -1 - возвращает после -1, т.е. левую границу области
-     \param[out] value переменная в которую сохраняется значение дискретного параметра
-     */
-     //virtual int GetNextDiscreteValues(int* mCurrentDiscreteValueIndex, double& value, int discreteVariable, int previousNumber = -2) = 0;+
-     /// Проверяет является ли value допустимым значением для параметра с номером discreteVariable
-     //virtual bool IsPermissibleValue(double value, int discreteVariable) = 0;+
-     
       py::list discrete_vals = data.attr("discrete_variable_values");
 
       for (int i = 0; i < discrete_vals.size(); i++) {
@@ -166,6 +134,7 @@ double PYProblem::CalculateFunctionals(const double* y, int fNumber) {
   try {
     std::cout << "fNumber: " << fNumber << std::endl;
     std::cout << "functionsOfProblem.size() = " << functionsOfProblem.size() << std::endl;
+    std::cout << "Calculate in point: " << *y << std::endl;
     auto start = std::chrono::steady_clock::now();
     temp = functionsOfProblem[fNumber](y);
     auto finish = std::chrono::steady_clock::now();

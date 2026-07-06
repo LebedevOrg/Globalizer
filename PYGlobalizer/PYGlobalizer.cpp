@@ -34,10 +34,18 @@
 namespace py = pybind11;
 
 /// Функция, реализующая приём задачи из Python и вызов решателя Globalizer
-void solve(py::object& data)
+void solve(py::object& data, int maxParams = 50, double r = 5, bool localRefineSolution = false, int numThreads = 2)
 {
   /// Инициализация Globalizer
   GlobalizerInitialization(0, nullptr, false, true);
+
+  //прорерка параметров: maxParams: 2 - 1000000, r > 1
+
+  parameters.MaxNumOfPoints = maxParams;
+  parameters.r = r;
+  //parameters.LocalRefineSolution = FinalStart; //сделать флажок    
+  parameters.NumPoints = numThreads; //и сделать :
+  parameters.NumThread = parameters.NumPoints;
 
   IProblem* problem;
 

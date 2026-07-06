@@ -716,15 +716,18 @@ void Process::DoIteration()
 {
   bool IsStop;
 
+  std::cout << "Started DoIteration!!!!!!!!!!!!!!!!!!!!!" << std::endl;
   //  проверяем критерий остановки
   IsStop = pMethod->CheckStopCondition();
   IsOptimumFound = IsStop;
+  std::cout << "CheckStopCondition finished!!!" << std::endl;
 
   if (IsOptimumFound)
     isPrintOptimEstimation = true;
 
   IsOptimumFound = CheckIsStop(IsOptimumFound);
   IsStop = IsOptimumFound;
+  std::cout << "CheckIsStop(IsOptimumFound) finished!!!" << std::endl;
 
   try
   {
@@ -732,8 +735,10 @@ void Process::DoIteration()
     {
       // вычисляем координаты испытаний
       pMethod->CalculateIterationPoints();
+      std::cout << "pMethod->CalculateIterationPoints();" << std::endl;
 
       IsStop = pMethod->CheckStopCondition();
+      std::cout << "pMethod->CheckStopCondition();" << std::endl;
       if (IsStop)
       {
         IsOptimumFound = true;
@@ -741,17 +746,22 @@ void Process::DoIteration()
       }
 
       pMethod->CalculateFunctionals();
+      std::cout << "pMethod->CalculateFunctionals();" << std::endl;
 
       for (int j = 0; j < pTask->GetNumOfFunc(); j++)
       {
         functionCalculationCount[j] += pMethod->GetFunctionCalculationCount()[j];
+        std::cout << j << ": pMethod->GetFunctionCalculationCount()[j];" << std::endl;
       }
       //Провести оценку оптимума нужно до обновления данных,  т.к. в этой функции может быть поднят флаг recalc
       pMethod->EstimateOptimum();
+      std::cout << "pMethod->EstimateOptimum();" << std::endl;
       //Все случаи поднятия флага recalc обработаны, можно обновлять базу
       pMethod->RenewSearchData();
+      std::cout << "pMethod->RenewSearchData();" << std::endl;
 
       pMethod->FinalizeIteration();
+      std::cout << "pMethod->FinalizeIteration();" << std::endl;
 
     }
     else

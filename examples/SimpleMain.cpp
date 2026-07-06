@@ -59,6 +59,8 @@ int main(int argc, char* argv[])
   IProblem* problem = nullptr;
   parameters.IsPlot = true; // Включаем рисование графика функции с точками испытаний (сохраняются в файл)
 
+  parameters.MaxNumOfPoints = 100;
+
   if (problemName == RASTRIGIN)
   {
     problem = new ProblemFromFunctionPointers(parameters.Dimension, // размерность задачи

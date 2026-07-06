@@ -277,19 +277,19 @@ int Solver::Solve()
     if (CheckParameters())
       return 1;
 
-    //std::cout << "CheckParameters() finished" << std::endl;
+    std::cout << "CheckParameters() finished" << std::endl;
 
     if ((parameters.calculationsArray[0] == MPI_calc) && (parameters.GetProcNum() > 1) && (parameters.GetProcRank() > 0))
     {
-      //std::cout << "MpiCalculation() begin" << std::endl;
+      std::cout << "MpiCalculation() begin" << std::endl;
       MpiCalculation();
-      //std::cout << "MpiCalculation() finished" << std::endl;
+      std::cout << "MpiCalculation() finished" << std::endl;
     }
     else if ((parameters.TypeCalculation == AsyncMPI) && (parameters.GetProcNum() > 1) && (parameters.GetProcRank() > 0))
     {
-      //std::cout << "AsyncCalculation() begin" << std::endl;
+      std::cout << "AsyncCalculation() begin" << std::endl;
       AsyncCalculation();
-      //std::cout << "AsyncCalculation() finished" << std::endl;
+      std::cout << "AsyncCalculation() finished" << std::endl;
     }
     else
     {

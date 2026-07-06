@@ -88,7 +88,7 @@ def testSVC2D():
     problem = PYProblem()
     problem.copy_from_problem(p)
 
-    PYGlobalizer.solve(problem)
+    PYGlobalizer.solve(problem, 50, 5, False, 1)
 
 if __name__ == "__main__":
     #TestSVC3D()
