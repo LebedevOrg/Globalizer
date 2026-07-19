@@ -31,7 +31,7 @@ echo [4/5] Start Intell OneAPI
 call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat" intel64 vs2022
 
 echo [5/5] CMake Configuration...
-call cmake -DGLOBALIZER_BUILD_PROBLEMS=ON  -DGLOBALIZER_BUILD_GCGEN=ON -DBUILD_ALL_TASK=ON -DGLOBALIZER_MAX_DIMENSION=130 -DGLOBALIZER_MAX_Number_Of_Function=70 -DGLOBALIZER_BUILD_TESTS=ON -DGLOBALIZER_USE_MPI=ON -DGLOBALIZER_MPI=intel -DGLOBALIZER_PYTHON=ON -DPython_FIND_DEBUG=OFF ..
+call cmake -DGLOBALIZER_BUILD_PROBLEMS=ON -DGLOBALIZER_BUILD_GCGEN=ON -DGLOBALIZER_MAX_DIMENSION=130 -DGLOBALIZER_MAX_Number_Of_Function=70 -DGLOBALIZER_BUILD_TESTS=ON -DGLOBALIZER_USE_MPI=ON -DGLOBALIZER_MPI=intel -DGLOBALIZER_PYTHON=ON -DPython_FIND_DEBUG=OFF -Drastrigin_build=ON -DrastriginInt_build=ON -DX2_build=ON -Dpython_objective_build=ON -Dstronginc3_build=ON -DrastriginC1_build=ON -DiOptProblemSimple_build=ON ..
 
 if %errorlevel% neq 0 goto error
 

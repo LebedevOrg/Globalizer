@@ -23,14 +23,11 @@ echo [2/5] activate a Conda Environment...
 call conda activate "%ROOT_DIR%\build_64\Globalizer_env"
 
 echo [3/5] Installing the library...
-call pip install -r ..\third_party\Problems\Problems\iOptProblem\requirements.txt
-call python "%ROOT_DIR%\third_party\Problems\Problems\iOptProblem\Tests\data\loader.py"
-call python "%ROOT_DIR%\third_party\Problems\Problems\iOptProblem\SVC_3D_Transformator.py"
-call conda install pybind11
+call pip install -r ..\requirements.txt
 
 
 echo [4/4] CMake Configuration...
-call cmake -DGLOBALIZER_BUILD_PROBLEMS=ON  -DGLOBALIZER_BUILD_GCGEN=ON -DBUILD_ALL_TASK=ON -DGLOBALIZER_MAX_DIMENSION=130 -DGLOBALIZER_MAX_Number_Of_Function=70 -DGLOBALIZER_BUILD_TESTS=ON -DGLOBALIZER_USE_MPI=OFF -DGLOBALIZER_PYTHON=ON -DPython_FIND_DEBUG=OFF -DPYGlobalizer=ON ..
+call cmake -DGLOBALIZER_BUILD_PROBLEMS=ON  -DGLOBALIZER_BUILD_GCGEN=ON -DGLOBALIZER_MAX_DIMENSION=130 -DGLOBALIZER_MAX_Number_Of_Function=70 -DGLOBALIZER_BUILD_TESTS=ON -DGLOBALIZER_USE_MPI=OFF -DGLOBALIZER_PYTHON=ON -DPython_FIND_DEBUG=OFF -DPYGlobalizer=ON -Drastrigin_build=ON -DrastriginInt_build=ON -DX2_build=ON -Dpython_objective_build=ON -Dstronginc3_build=ON -DrastriginC1_build=ON -DiOptProblemSimple_build=ON ..
 
 if %errorlevel% neq 0 goto error
 
