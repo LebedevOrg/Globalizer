@@ -1,0 +1,53 @@
+# ============================================================
+# requirements.txt для Globalizer
+# Покрывает: задачу iOptProblemSimple + визуализацию (plotters)
+#            + Python-интерфейс PYGlobalizer
+# Python 3.12 (см. gen/StartVS.bat)
+# ============================================================
+
+# ---------- Ядро: используется везде ----------
+numpy==2.3.4
+
+# ---------- Задача iOptProblemSimple ----------
+# Globalizer_problem.py: requests, tqdm
+requests==2.32.5
+tqdm==4.67.1
+
+# ---------- Визуализация (lib/plotters) ----------
+# painters.py / plotters.py: matplotlib, scipy, sklearn
+matplotlib==3.10.7
+scipy==1.16.2
+scikit-learn==1.7.2
+
+# ---------- Python-интерфейс PYGlobalizer (сборка модуля через pybind11) ----------
+# Нужен на этапе компиляции PYGlobalizer.cpp / PYProblem.h.
+# Если pybind11 подключается как submodule/через CMake — строку можно удалить.
+pybind11==2.13.6
+
+# ============================================================
+# Транзитивные зависимости (фиксируем версии для воспроизводимости)
+# ============================================================
+
+# --- requests ---
+certifi==2025.10.5
+charset-normalizer==3.4.4
+idna==3.11
+urllib3==2.5.0
+
+# --- tqdm (Windows) ---
+colorama==0.4.6
+
+# --- matplotlib ---
+contourpy==1.3.3
+cycler==0.12.1
+fonttools==4.60.1
+kiwisolver==1.4.9
+packaging==25.0
+pillow==12.0.0
+pyparsing==3.2.5
+python-dateutil==2.9.0.post0
+six==1.17.0
+
+# --- scikit-learn ---
+joblib==1.5.2
+threadpoolctl==3.6.0
