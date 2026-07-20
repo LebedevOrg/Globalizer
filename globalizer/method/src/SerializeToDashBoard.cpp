@@ -147,7 +147,8 @@ double SerializeToDashBoard::CalculateAchievedAccuracy(Task* pTask, Trial* bestT
   }
 
   // Для оптимальной точки в пространстве
-  if (pTask->GetIsOptimumPointDefined()) {
+  if (pTask->GetIsOptimumPointDefined()) 
+  {
     double PointDifference = 0.0;
     for (int i = 0; i < pTask->GetN(); i++) {
       double diff = fabs(bestTrial->y[i] - pTask->GetOptimumPoint()[i]);
@@ -184,7 +185,7 @@ json SerializeToDashBoard::SolutionResultToJson(SolutionResult& solutionResult, 
   jSolution["number_of_global_trials"] = solutionResult.IterationCount; // Иногда сохраняют как количество итераций
   jSolution["number_of_local_trials"] = 0; // В текущей реализации не используется
   jSolution["solving_time"] = solutionResult.SolvingTime;        
-  jSolution["solution_accuracy"] = CalculateAchievedAccuracy(pTask, solutionResult.BestTrial);
+  jSolution["solution_accuracy"] = solutionResult.BestTrial->leftInterval ? solutionResult.BestTrial->leftInterval->delta : 0.0;
 
   jSolution["num_iteration_best_trial"] = json::array();
   // Лучшая итерация

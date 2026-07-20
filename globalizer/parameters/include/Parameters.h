@@ -240,7 +240,7 @@ public:
   // Параметры сериализации и сохранения данных
   // -----------------------------------------------------------------------
 
-  /// Путь для сохранения и загрузки
+  /// Имя файла для сохранения и загрузки в формате json
   TString<Parameters> FileSerializer;
   /// Включить сохранение в json для dashboard
   TBool<Parameters> IsSerializeToDashBoard;
@@ -343,6 +343,9 @@ public:
   int GetProcNum();
   /// Возвращает имя файла для сохранения картинки построенных линий уровней
   std::string GetPlotFileName();
+
+  /// Возвращает имя файла json для построения DashBoard
+  std::string GetJsonFileName();
   /// Печать текущих значений параметров
   void PrintParameters();
 

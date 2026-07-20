@@ -381,6 +381,28 @@ std::string Parameters::GetPlotFileName()
 }
 
 // ------------------------------------------------------------------------------------------------
+/// Возвращает имя файла  json файла для построения DashBoard
+std::string Parameters::GetJsonFileName()
+{  
+  if (FileSerializer.ToString() == "")
+  {
+    std::string res = "";
+    res += "globalizer_";
+    if (this->LibPath.GetIsChange())
+      res += this->LibPath.ToString();
+    else
+      res += getCurrentDateTime();
+    res += +".json";
+    return res;
+  }
+  else
+  {
+    return FileSerializer.ToString();
+  }
+}
+
+
+// ------------------------------------------------------------------------------------------------
 /// Инициализация параметров
 void Parameters::Init(int argc, char* argv[], bool isMPIInit)
 {

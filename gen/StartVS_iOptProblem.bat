@@ -16,8 +16,11 @@ git submodule update
 call conda init
 
 echo [1/5] Creating a Conda Environment...
+
 ::call conda create -p "%ROOT_DIR%\build_64\Globalizer_env" python=3.12 -y
-call conda create -p "%ROOT_DIR%\build_64\Globalizer_env" -c conda-forge/label/debug python=3.12 -y
+::call conda create -p "%ROOT_DIR%\build_64\Globalizer_env" -c conda-forge/label/debug python=3.12 -y
+
+call conda create -p "%ROOT_DIR%\build_64\Globalizer_env" -c https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/ -c https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/ -c https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/r/ -c conda-forge python=3.12 -y
 
 echo [2/5] activate a Conda Environment...
 call conda activate "%ROOT_DIR%\build_64\Globalizer_env"

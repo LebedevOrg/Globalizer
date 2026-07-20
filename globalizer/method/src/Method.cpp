@@ -1794,6 +1794,11 @@ void Method::SaveCurrentProgress()
     intervalCounter++;
   }
 
+  std::string pointsPathExtension = GetFileExtension(parameters.FileSerializer.ToString());
+
+  if (pointsPathExtension == "")
+    parameters.FileSerializer = parameters.FileSerializer.ToString() + ".json";
+
   parameters.serializer->SaveProgress(parameters.FileSerializer.ToString(), newTrials, newIntervals, pData->GetBestTrial());
 
   lastSavedTrialsCount = allTrials.size();
