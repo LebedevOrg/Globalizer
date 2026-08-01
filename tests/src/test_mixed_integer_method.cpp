@@ -53,8 +53,8 @@ protected:
   Calculation* pCalculation;
 
   // Полная размерность и число дискретных переменных задачи.
-  static const int kDim = 4;
-  static const int kDiscrete = 2;
+  static constexpr int kDim = 4;
+  static constexpr int kDiscrete = 2;
 
   /// Растригин с частично целочисленными переменными (как RASTRIGIN_INT).
   static IProblem* CreateRastriginInt(int dim, int numDiscrete,
