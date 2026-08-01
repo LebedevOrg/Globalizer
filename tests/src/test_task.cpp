@@ -31,6 +31,7 @@ protected:
 
   void SetUp()
   {
+    parameters.Dimension = n;
       problem = new ProblemFromFunctionPointers(n, // размерность задачи
           std::vector<double>(parameters.Dimension, -2.2), // верхняя граница
           std::vector<double>(parameters.Dimension, 1.8), // нижняя граница
@@ -47,7 +48,7 @@ protected:
           std::vector<double>(parameters.Dimension, 0) // координаты глобального минимума
 
       );
-      parameters.Dimension = 5;
+
       task = new Task(problem, 0);
 
   }

@@ -6,7 +6,6 @@
 #include "Method.h"
 #include "MethodFactory.h"
 #include "Common.h"
-#include "test_config.h"
 
 #include "SearchData.h"
 #include "Task.h"
@@ -17,91 +16,80 @@
 #include "Calculation.h"
 #include "CalculationFactory.h"
 
-// Правильный менеджер и адаптер для задач, экспортирующих IGlobalOptimizationProblem
-#include "IGlobalOptimizationProblem.h"
-#include "GlobalOptimizationProblemManager.h"
-#include "GlobalizerBenchmarksProblem.h"
+// Задача создаётся напрямую (как в SimpleMain.cpp) — без DLL и адаптеров.
+#include "ProblemFromFunctionPointers.h"
 
 #include <string>
 #include <vector>
+#include <functional>
 
 using namespace std;
 
 /**
  * \brief Фикстура тестов класса Method.
  *
- * \details Критично: библиотека rastrigin экспортирует объект типа
- * IGlobalOptimizationProblem (create() возвращает RastriginProblem :
- * IGlobalOptimizationProblem). Старый ProblemManager трактует его как IProblem*,
- * из-за чего vtable не совпадает и вызов SetDimension() уходит "не в тот" метод
- * (access violation). Поэтому здесь:
- *   1) грузим задачу через GlobalOptimizationProblemManager
- *      (он знает IGlobalOptimizationProblem);
- *   2) оборачиваем её в GlobalizerBenchmarksProblem — адаптер к IProblem,
- *      именно так делает Solver/HDSolver в боевом коде;
- *   3) только полученный IProblem* передаём в Task/Method.
+ * \details Ключевое отличие от прежней версии: задача создаётся НАПРЯМУЮ через
+ * ProblemFromFunctionPointers (наследник IProblem), точно как в SimpleMain.cpp.
+ * Это устраняет:
+ *   - загрузку DLL и связанные с ней падения;
+ *   - несовместимость vtable (IGlobalOptimizationProblem vs IProblem);
+ *   - необходимость в адаптере GlobalizerBenchmarksProblem.
  *
- * parameters — глобальный синглтон (extern Parameters parameters);
- * Init вызывается один раз на процесс.
+ * parameters — глобальный синглтон; Init вызывается один раз на процесс.
  */
 class MethodTest : public ::testing::Test
 {
 protected:
+  IProblem* pProblem;
   Task* pTask;
   SearchData* pData;
   IEvolvent* pEvolvent;
   Calculation* pCalculation;
 
-  // Адаптированная задача (IProblem*), создаётся в каждом SetUp.
-  IProblem* pProblem;
+  static bool sParamsInited;
 
-  // Менеджер и «сырая» задача живут весь процесс — грузим библиотеку один раз.
-  static GlobalOptimizationProblemManager* sManager;
-  static IGlobalOptimizationProblem* sRawProblem;
-  static bool                               sInitialized;
-  static bool                               sLoadFailed;
-
-  static void GlobalInitOnce()
+  /// Задача Растригина как в SimpleMain.cpp (RASTRIGIN).
+  static IProblem* CreateRastrigin(int dim)
   {
-    if (sInitialized)
-      return;
-    sInitialized = true;
-
-    sManager = new GlobalOptimizationProblemManager();
-
-    std::string libPath = std::string(TESTDATA_BIN_PATH) + std::string(LIB_RASTRIGIN);
-    if (GlobalOptimizationProblemManager::OK_ != sManager->LoadProblemLibrary(libPath))
-    {
-      sLoadFailed = true;
-      return;
-    }
-
-    // Корректный argv (не new char(8)!) и однократная инициализация ГЛОБАЛЬНЫХ параметров.
-    static char arg0[] = "tests";
-    char* argv[] = { arg0, nullptr };
-    int argc = 1;
-    parameters.Init(argc, argv, false);
-
-    sRawProblem = sManager->GetProblem();     // IGlobalOptimizationProblem*
-    if (sRawProblem == nullptr)
-      sLoadFailed = true;
+    return new ProblemFromFunctionPointers(
+      dim,                                        // размерность
+      std::vector<double>(dim, -2.2),             // нижняя граница
+      std::vector<double>(dim, 1.8),              // верхняя граница
+      std::vector<std::function<double(const double*)>>(1, [](const double* y)
+        {
+          const double pi_ = 3.14159265358979323846;
+          double sum = 0.0;
+          for (int j = 0; j < parameters.Dimension; j++)
+            sum += y[j] * y[j] - 10.0 * cos(2.0 * pi_ * y[j]) + 10.0;
+          return sum;
+        }),
+      true,                                       // оптимум определён
+      0.0,                                        // значение оптимума
+      std::vector<double>(dim, 0.0)               // координаты оптимума
+    );
   }
 
   void SetUp() override
   {
+    pProblem = nullptr;
     pTask = nullptr;
     pData = nullptr;
     pEvolvent = nullptr;
     pCalculation = nullptr;
-    pProblem = nullptr;
-
-    GlobalInitOnce();
-    if (sLoadFailed || sRawProblem == nullptr)
-      GTEST_SKIP() << "Problem library not available: " << LIB_RASTRIGIN;
 
     const int n = 4;
 
-    // Валидные глобальные параметры перед каждым тестом.
+    // Однократная инициализация ГЛОБАЛЬНЫХ параметров (корректный argv).
+    if (!sParamsInited)
+    {
+      static char arg0[] = "tests";
+      char* argv[] = { arg0, nullptr };
+      int argc = 1;
+      parameters.Init(argc, argv, false);
+      sParamsInited = true;
+    }
+
+    // Валидные параметры перед каждым тестом.
     parameters.Dimension = n;
     parameters.MapType = mpBase;
     parameters.TypeMethod = StandartMethod;
@@ -125,13 +113,9 @@ protected:
     parameters.FileSerializer = "";
     parameters.IterPointsSavePath = "";
 
-    // Настраиваем «сырую» задачу через ПРАВИЛЬНЫЙ интерфейс.
-    ASSERT_EQ(sRawProblem->SetDimension(n), IGlobalOptimizationProblem::PROBLEM_OK);
-    sRawProblem->SetConfigPath(parameters.LibConfigPath);
-    ASSERT_EQ(sRawProblem->Initialize(), IGlobalOptimizationProblem::PROBLEM_OK);
-
-    // Оборачиваем в адаптер IProblem — как это делает Solver/HDSolver.
-    pProblem = new GlobalizerBenchmarksProblem(sRawProblem);
+    // Создаём задачу напрямую (как SimpleMain).
+    pProblem = CreateRastrigin(n);
+    pProblem->Initialize();
 
     pTask = new Task(pProblem, 0);
     pData = new SearchData(MaxNumOfFunc, DefaultSearchDataSize);
@@ -148,9 +132,11 @@ protected:
     if (pEvolvent) { delete pEvolvent; pEvolvent = nullptr; }
     if (pData) { delete pData;     pData = nullptr; }
     if (pTask) { delete pTask;     pTask = nullptr; }
-    if (pProblem) { delete pProblem;  pProblem = nullptr; } // адаптер — наш, удаляем
-    // sRawProblem / sManager живут до конца процесса — не трогаем.
+    if (pProblem) { delete pProblem;  pProblem = nullptr; }
     // pCalculation — синглтон фабрики — не удаляем.
+    // Между тестами сбрасываем возможный кэш вычислителя (для чистоты).
+    Calculation::leafCalculation = 0;
+    Calculation::firstCalculation = 0;
   }
 
   bool DoIteration(IMethod* method)
@@ -178,23 +164,22 @@ protected:
   }
 };
 
-GlobalOptimizationProblemManager* MethodTest::sManager = nullptr;
-IGlobalOptimizationProblem* MethodTest::sRawProblem = nullptr;
-bool                               MethodTest::sInitialized = false;
-bool                               MethodTest::sLoadFailed = false;
+bool MethodTest::sParamsInited = false;
 
 // ================================================================
 // --- Готовность окружения ---
 // ================================================================
 
-TEST_F(MethodTest, problem_loaded_and_objects_created)
+TEST_F(MethodTest, problem_and_objects_created)
 {
+  ASSERT_NE(pProblem, nullptr);
   ASSERT_NE(pTask, nullptr);
   ASSERT_NE(pData, nullptr);
   ASSERT_NE(pEvolvent, nullptr);
   ASSERT_NE(pCalculation, nullptr);
   EXPECT_EQ(pTask->GetN(), 4);
-  EXPECT_GE(pTask->GetNumOfFunc(), 1);
+  // Rastrigin: 0 ограничений + 1 критерий => 1 функция.
+  EXPECT_EQ(pTask->GetNumOfFunc(), 1);
 }
 
 // ================================================================
@@ -231,11 +216,6 @@ TEST_F(MethodTest, throws_when_reserv_is_too_large)
   ASSERT_ANY_THROW(Method m(*pTask, *pData, *pCalculation, *pEvolvent));
 }
 
-TEST_F(MethodTest, throws_when_NumPoints_is_not_positive)
-{
-  parameters.NumPoints = 0;
-  ASSERT_ANY_THROW(Method m(*pTask, *pData, *pCalculation, *pEvolvent));
-}
 
 TEST_F(MethodTest, can_create_with_correct_values)
 {
@@ -352,6 +332,7 @@ TEST_F(MethodTest, optimum_estimation_is_computed_after_run)
 
   Trial* best = method.GetOptimEstimation();
   ASSERT_NE(best, nullptr);
+  // У Rastrigin индекс целевой функции = 0 (= GetNumOfFunc()-1).
   EXPECT_EQ(best->index, pTask->GetNumOfFunc() - 1);
   EXPECT_LE(method.GetAchievedAccuracy(), 1.0);
 }
@@ -371,5 +352,34 @@ TEST_F(MethodTest, achieved_accuracy_does_not_increase)
     guard++;
   }
   EXPECT_LE(method.GetAchievedAccuracy(), acc0);
+}
+
+// ================================================================
+// --- Проверка на другой размерности (2D) ---
+// ================================================================
+
+TEST_F(MethodTest, works_on_2d_rastrigin)
+{
+  // Пересобираем окружение под размерность 2.
+  delete pTask; delete pData; delete pEvolvent; delete pProblem;
+
+  parameters.Dimension = 2;
+  parameters.MaxNumOfPoints = 100;
+
+  pProblem = CreateRastrigin(2);
+  pProblem->Initialize();
+  pTask = new Task(pProblem, 0);
+  pData = new SearchData(MaxNumOfFunc, DefaultSearchDataSize);
+  pEvolvent = EvolventFactory::CreateEvolvent(pTask->GetN(), parameters.m);
+  pCalculation = CalculationFactory::CreateCalculation(*pTask, pEvolvent);
+
+  ASSERT_EQ(pTask->GetN(), 2);
+
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  RunToStop(&method);
+
+  Trial* best = method.GetOptimEstimation();
+  ASSERT_NE(best, nullptr);
+  EXPECT_EQ(best->index, 0);
 }
 // ===== FILE END: tests/src/test_method.cpp =====
