@@ -43,41 +43,45 @@
 */
 class IEvolvent
 {
-protected:
-  /// Точность разложения гиперкуба
-  int      m;
-  /// Размерность задачи
-  int      N;
-  /// Левые границы поисковой области
-  double   A[MaxDim];
-  /// Правые границы поисковой области
-  double   B[MaxDim];
-  /// Точка из гиперкуба [-1/2, 1/2]^N
-  double* y;
-
-  /// Extended(0.0)
-  const Extended extNull;
-  /// = Extended(1.0)
-  const Extended extOne;
-  /// = Extended(0.5)
-  const Extended extHalf;
-  Extended nexpExtended;
-
-
-  virtual void CalculateNumbr(Extended* s, long long* u, long long* v, long long* l) = 0;
-
-  /// вычисление вспомогательного центра u(s) и соответствующих ему v(s) и l(s)
-  virtual void CalculateNode(Extended is, int n, long long* u, long long* v, long long* l) = 0;
-  /// Преобразование из гиперкуба P в гиперинтервал D
-  virtual void transform_P_to_D() = 0;
-  /// Преобразование из гиперинтервала D в гиперкуб P
-  virtual void transform_D_to_P() = 0;
-  /// Получить точку y по x
-  virtual double* GetYOnX(const Extended& _x) = 0;
-  /// Получить x по точке y
-  virtual Extended GetXOnY() = 0;
+//protected:
+//  /// Точность разложения гиперкуба
+//  int      m;
+//  /// Размерность задачи
+//  int      N;
+//  /// Левые границы поисковой области
+//  double   A[MaxDim];
+//  /// Правые границы поисковой области
+//  double   B[MaxDim];
+//  /// Точка из гиперкуба [-1/2, 1/2]^N
+//  double* y;
+//
+//  /// Extended(0.0)
+//  const Extended extNull;
+//  /// = Extended(1.0)
+//  const Extended extOne;
+//  /// = Extended(0.5)
+//  const Extended extHalf;
+//  Extended nexpExtended;
+//
+//
+//  virtual void CalculateNumbr(Extended* s, long long* u, long long* v, long long* l) = 0;
+//
+//  /// вычисление вспомогательного центра u(s) и соответствующих ему v(s) и l(s)
+//  virtual void CalculateNode(Extended is, int n, long long* u, long long* v, long long* l) = 0;
+//  /// Преобразование из гиперкуба P в гиперинтервал D
+//  virtual void transform_P_to_D() = 0;
+//  /// Преобразование из гиперинтервала D в гиперкуб P
+//  virtual void transform_D_to_P() = 0;
+//  /// Получить точку y по x
+//  virtual double* GetYOnX(const Extended& _x) = 0;
+//  /// Получить x по точке y
+//  virtual Extended GetXOnY() = 0;
 
 public:
+
+  /// Виртуальный деструктор
+  virtual ~IEvolvent() {}
+
   /**
   \brief Возвращает левые границы поисковой области (A)
   */

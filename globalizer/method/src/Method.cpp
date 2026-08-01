@@ -85,11 +85,11 @@ Method::Method(Task& _pTask, SearchData& _pData,
   iteration.pCurTrials.resize(parameters.NumPoints);
 
   //===========================================================================================================================================
-  mu = new double[pTask.GetNumOfFunc()];
-  for (int i = 0; i < pTask.GetNumOfFunc(); i++)
+  mu = new double[pTask.GetNumOfFunc() + 1];
+  for (int i = 0; i < pTask.GetNumOfFunc() + 1; i++)
     mu[i] = 0;
-  Xmax = new double[pTask.GetNumOfFunc()];
-  for (int i = 0; i < pTask.GetNumOfFunc(); i++)
+  Xmax = new double[pTask.GetNumOfFunc() + 1];
+  for (int i = 0; i < pTask.GetNumOfFunc() + 1; i++)
     Xmax[i] = 0;
   //===========================================================================================================================================
 
@@ -128,6 +128,10 @@ Method::Method(Task& _pTask, SearchData& _pData,
 // ------------------------------------------------------------------------------------------------
 Method::~Method()
 {
+  delete[] mu;    
+  mu = nullptr;
+  delete[] Xmax;  
+  Xmax = nullptr;
 }
 
 
@@ -1200,6 +1204,13 @@ SearchInterval* Method::AddCurrentPoint(Trial& pCurTrialsj, SearchInterval* Best
   if (BestIntervalsj->izl() > j)
     j = BestIntervalsj->izl();
 
+  if (j < 0) 
+    j = 0; // отрицательные индексы (-2/-3) недопустимы
+
+  if (j > pTask.GetNumOfFunc()) 
+    j = pTask.GetNumOfFunc();
+
+
   if (Xmax[j] < (BestIntervalsj)->delta)
   {
     Xmax[j] = (BestIntervalsj)->delta;
@@ -1208,6 +1219,12 @@ SearchInterval* Method::AddCurrentPoint(Trial& pCurTrialsj, SearchInterval* Best
   j = NewInterval->izr();
   if (NewInterval->izl() > j)
     j = NewInterval->izl();
+
+  if (j < 0) 
+    j = 0;
+
+  if (j > pTask.GetNumOfFunc())
+    j = pTask.GetNumOfFunc();
 
   if (Xmax[j] < (NewInterval)->delta)
   {

@@ -399,34 +399,37 @@ public:
       (mCurrentDiscreteValueIndex == 0) ||
       (mNumberOfValues == 0))
       return IIntegerProgrammingProblem::ERROR_DISCRETE_VALUE;
+
+    // Единый корректный индекс дискретной переменной в массивах размера NumberOfDiscreteVariable
+    const int di = discreteVariable - (GetDimension() - GetNumberOfDiscreteVariable());
+
     // если -1 то сбрасываем значение текущего номера
     if (previousNumber == -1)
     {
-      mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()] = 0;
+      mCurrentDiscreteValueIndex[di] = 0;
       value = mLeftBorder;
       return IProblem::OK;
     }
     else if (previousNumber == -2)
     {
       double d = (mRightBorder - mLeftBorder) /
-        (mNumberOfValues[discreteVariable - (GetDimension() - GetNumberOfDiscreteVariable())] - 1);
-      mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()]++;
-      value = mLeftBorder + d *
-        mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()];
+        (mNumberOfValues[di] - 1);
+      mCurrentDiscreteValueIndex[di]++;
+      value = mLeftBorder + d * mCurrentDiscreteValueIndex[di];
       return IProblem::OK;
     }
     else
     {
       double d = (mRightBorder - mLeftBorder) /
-        (mNumberOfValues[discreteVariable - (GetDimension() - GetNumberOfDiscreteVariable())] - 1);
-      mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()] =
-        previousNumber;
-      mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()]++;
-      value = mLeftBorder + d * mCurrentDiscreteValueIndex[discreteVariable -
-        GetNumberOfDiscreteVariable()];
+        (mNumberOfValues[di] - 1);
+      mCurrentDiscreteValueIndex[di] = previousNumber;
+      mCurrentDiscreteValueIndex[di]++;
+      value = mLeftBorder + d * mCurrentDiscreteValueIndex[di];
       return IProblem::OK;
     }
   }
+
+
   /// Проверяет является ли value допустимым значением для параметра с номером discreteVariable
   virtual bool IsPermissibleValue(double value, int discreteVariable)
   {

@@ -13,7 +13,23 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/config)
 
 include_directories(${PROJECT_SOURCE_DIR}/third_party/gtest/googletest/include)
 
+
 add_executable(${PROJECT_NAME_STR} ${SRC_FILES})
+set_target_properties(${PROJECT_NAME_STR} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TESTS_OUTPUT_DIRECTORY})
+
+# --- Диагностика памяти для тестов ---
+option(GLOBALIZER_TESTS_ASAN "Build tests with AddressSanitizer" OFF)
+if (GLOBALIZER_TESTS_ASAN)
+  message(STATUS "[tests] AddressSanitizer ENABLED")
+  if (MSVC)
+    target_compile_options(${PROJECT_NAME_STR} PRIVATE /fsanitize=address /Zi)
+    target_link_options(${PROJECT_NAME_STR} PRIVATE /INCREMENTAL:NO)
+  else()
+    target_compile_options(${PROJECT_NAME_STR} PRIVATE -fsanitize=address -fno-omit-frame-pointer -g)
+    target_link_options(${PROJECT_NAME_STR} PRIVATE -fsanitize=address)
+  endif()
+endif()
+
 set_target_properties(${PROJECT_NAME_STR} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TESTS_OUTPUT_DIRECTORY})
 target_link_libraries(${PROJECT_NAME_STR}
   ${GLOBALIZER_LIB_NAME}

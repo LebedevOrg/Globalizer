@@ -8,99 +8,58 @@
 #include "Trial.h"
 #include "InformationForCalculation.h"
 #include "CalculationProblem.h"
+#include "test_reset.h"   // добавить include
 
-/**
- * \brief Тестовый класс для классов Calculation, OMPCalculation и CalculationFactory.
- *
- * \details Отвечает за создание и настройку общего тестового окружения перед каждым тестом
- * и его очистку после. Это гарантирует изоляцию тестов друг от друга.
- */
-class CalculationTest : public ::testing::Test {
+class CalculationTest : public ::testing::Test
+{
 protected:
-  /// Указатель на CalculationProblem объект задачи.
   CalculationProblem* calculationProblem;
-  /// Указатель на задачу для корневого процесса (не-листовая).
   Task* nonLeafTask;
-  /// Указатель на задачу для дочернего процесса (листовая).
   Task* leafTask;
-  /// Хранилище для исходного состояния глобальных параметров.
-  Parameters originalParameters;
 
-  /**
-   * \brief Метод настройки, вызываемый перед каждым тестом.
-   * \details Инициализирует глобальные параметры, создает CalculationProblem объекты и задачи,
-   * а также сбрасывает статические поля класса Calculation для обеспечения
-   * чистого состояния для каждого теста.
-   */
-  void SetUp() override {
-    int argc = 1;
-    char* argv[] = { const_cast<char*>("tests"), nullptr };
-    parameters.Init(argc, argv, false);
+  void SetUp() override
+  {
+    // Init уже выполнен глобальным Environment — повторно НЕ вызываем.
+    // Приводим глобальные параметры к валидным значениям.
+    ResetParametersToMethodDefaults(2);
+    parameters.TypeCalculation = OMP;
 
-    originalParameters = parameters;
-    parameters.Dimension = 2;
+    // Полный сброс статики Calculation (CalculationTest — friend).
+    if (Calculation::leafCalculation) { delete Calculation::leafCalculation; Calculation::leafCalculation = nullptr; }
+    if (Calculation::firstCalculation) { delete Calculation::firstCalculation; Calculation::firstCalculation = nullptr; }
+    Calculation::countCalculation = 0;
+    Calculation::isStartComputingAway = true;
+    Calculation::inputCalculation.Clear();
+    Calculation::resultCalculation.Clear();
 
     calculationProblem = new CalculationProblem();
     nonLeafTask = new Task(calculationProblem, 0);
     leafTask = new Task(calculationProblem, 1);
-
-    if (Calculation::leafCalculation) {
-      delete Calculation::leafCalculation;
-      Calculation::leafCalculation = nullptr;
-    }
-    Calculation::firstCalculation = nullptr;
-
-    SetCountCalculation(0);
-    SetStartComputingAway(true);
-    GetInputCalculation().Clear();
-    GetResultCalculation().Clear();
   }
 
-  /**
-   * \brief Метод очистки, вызываемый после каждого теста.
-   * \details Освобождает всю выделенную в SetUp память и сбрасывает статические
-   * указатели, чтобы предотвратить утечки памяти и влияние на последующие тесты.
-   */
-  void TearDown() override {
-    delete nonLeafTask;
-    delete leafTask;
-    delete calculationProblem;
+  void TearDown() override
+  {
+    // Сначала уничтожаем вычислители (держат Task*), потом задачи.
+    if (Calculation::leafCalculation) { delete Calculation::leafCalculation; Calculation::leafCalculation = nullptr; }
+    if (Calculation::firstCalculation) { delete Calculation::firstCalculation; Calculation::firstCalculation = nullptr; }
+    Calculation::countCalculation = 0;
+    Calculation::isStartComputingAway = true;
+    Calculation::inputCalculation.Clear();
+    Calculation::resultCalculation.Clear();
 
-    GetInputCalculation().Clear();
-    GetResultCalculation().Clear();
+    delete nonLeafTask;   nonLeafTask = nullptr;
+    delete leafTask;      leafTask = nullptr;
+    delete calculationProblem; calculationProblem = nullptr;
 
-    if (Calculation::leafCalculation) {
-      delete Calculation::leafCalculation;
-      Calculation::leafCalculation = nullptr;
-    }
-    Calculation::firstCalculation = nullptr;
-    parameters = originalParameters;
   }
 
-  // --- Геттеры/сеттеры для доступа к protected-членам Calculation ---
-  void SetStartComputingAway(bool value) {
-    Calculation::isStartComputingAway = value;
-  }
-
-  void SetCountCalculation(int count) {
-    Calculation::countCalculation = count;
-  }
-
-  InformationForCalculation& GetInputCalculation() {
-    return Calculation::inputCalculation;
-  }
-
-  TResultForCalculation& GetResultCalculation() {
-    return Calculation::resultCalculation;
-  }
-
-  int GetCountCalculation() {
-    return Calculation::countCalculation;
-  }
-
-  bool IsStartComputingAway() {
-    return Calculation::isStartComputingAway;
-  }
+  // Геттеры/сеттеры к protected-членам остаются как были:
+  void SetStartComputingAway(bool value) { Calculation::isStartComputingAway = value; }
+  void SetCountCalculation(int count) { Calculation::countCalculation = count; }
+  InformationForCalculation& GetInputCalculation() { return Calculation::inputCalculation; }
+  TResultForCalculation& GetResultCalculation() { return Calculation::resultCalculation; }
+  int  GetCountCalculation() { return Calculation::countCalculation; }
+  bool IsStartComputingAway() { return Calculation::isStartComputingAway; }
 };
 
 // ================================================================
@@ -110,7 +69,8 @@ protected:
 /**
  * \brief Проверяет, что CreateNewCalculation корректно создает OMPCalculation для листовой задачи.
  */
-TEST_F(CalculationTest, Factory_CreateNewCalculation_CreatesOMP_ForLeafTask) {
+TEST_F(CalculationTest, Factory_CreateNewCalculation_CreatesOMP_ForLeafTask) 
+{
   parameters.TypeCalculation = OMP;
   Calculation* calc = CalculationFactory::CreateNewCalculation(*leafTask);
 
@@ -123,7 +83,8 @@ TEST_F(CalculationTest, Factory_CreateNewCalculation_CreatesOMP_ForLeafTask) {
 /**
  * \brief Проверяет, что CreateNewCalculation возвращает nullptr для не-листовой задачи.
  */
-TEST_F(CalculationTest, Factory_CreateNewCalculation_ReturnsNull_ForNonLeafTask) {
+TEST_F(CalculationTest, Factory_CreateNewCalculation_ReturnsNull_ForNonLeafTask) 
+{
   parameters.TypeCalculation = OMP;
   Calculation* calc = CalculationFactory::CreateNewCalculation(*nonLeafTask);
   EXPECT_EQ(calc, nullptr);
@@ -134,7 +95,8 @@ TEST_F(CalculationTest, Factory_CreateNewCalculation_ReturnsNull_ForNonLeafTask)
  * \details В отличие от singleton-методов, два последовательных вызова должны
  * возвращать разные объекты.
  */
-TEST_F(CalculationTest, Factory_CreateNewCalculation_AlwaysCreatesNewInstance) {
+TEST_F(CalculationTest, Factory_CreateNewCalculation_AlwaysCreatesNewInstance) 
+{
   parameters.TypeCalculation = OMP;
 
   Calculation* calc1 = CalculationFactory::CreateNewCalculation(*leafTask);
@@ -153,7 +115,8 @@ TEST_F(CalculationTest, Factory_CreateNewCalculation_AlwaysCreatesNewInstance) {
  * \details Убеждается, что при повторном вызове для листовой задачи возвращается
  * тот же самый экземпляр вычислителя.
  */
-TEST_F(CalculationTest, Factory_CreateCalculation2_SingletonLogic) {
+TEST_F(CalculationTest, Factory_CreateCalculation2_SingletonLogic) 
+{
   parameters.TypeCalculation = OMP;
 
   Calculation* calc1 = CalculationFactory::CreateCalculation2(*leafTask);
@@ -167,7 +130,8 @@ TEST_F(CalculationTest, Factory_CreateCalculation2_SingletonLogic) {
 /**
  * \brief Проверяет, что CreateCalculation возвращает nullptr для листовой задачи.
  */
-TEST_F(CalculationTest, Factory_CreateCalculation_ReturnsNull_ForLeafTask) {
+TEST_F(CalculationTest, Factory_CreateCalculation_ReturnsNull_ForLeafTask) 
+{
   parameters.TypeCalculation = OMP;
   Calculation* calc = CalculationFactory::CreateCalculation(*leafTask);
   EXPECT_EQ(calc, nullptr);
@@ -179,7 +143,8 @@ TEST_F(CalculationTest, Factory_CreateCalculation_ReturnsNull_ForLeafTask) {
  * Calculation::leafCalculation (не в firstCalculation). Повторный вызов
  * возвращает тот же самый экземпляр.
  */
-TEST_F(CalculationTest, Factory_CreateCalculation_SingletonLogic_ForNonLeafTask) {
+TEST_F(CalculationTest, Factory_CreateCalculation_SingletonLogic_ForNonLeafTask) 
+{
   parameters.TypeCalculation = OMP;
 
   Calculation* calc1 = CalculationFactory::CreateCalculation(*nonLeafTask);
@@ -194,7 +159,8 @@ TEST_F(CalculationTest, Factory_CreateCalculation_SingletonLogic_ForNonLeafTask)
 /**
  * \brief Проверяет, что повторный вызов CreateCalculation2 сохраняет ссылку в leafCalculation.
  */
-TEST_F(CalculationTest, Factory_CreateCalculation2_StoresLeafCalculation) {
+TEST_F(CalculationTest, Factory_CreateCalculation2_StoresLeafCalculation) 
+{
   parameters.TypeCalculation = OMP;
 
   Calculation* calc = CalculationFactory::CreateCalculation2(*leafTask);
@@ -211,7 +177,8 @@ TEST_F(CalculationTest, Factory_CreateCalculation2_StoresLeafCalculation) {
  * \details Проверяет, что Calculate сразу вычисляет значения для переданного испытания
  * и корректно заполняет поля index, FuncValues и счетчики.
  */
-TEST_F(CalculationTest, OMPCalculation_Calculate_ImmediateExecution) {
+TEST_F(CalculationTest, OMPCalculation_Calculate_ImmediateExecution) 
+{
   OMPCalculation calc(*leafTask);
   InformationForCalculation inputSet;
   TResultForCalculation outputSet;
@@ -240,7 +207,8 @@ TEST_F(CalculationTest, OMPCalculation_Calculate_ImmediateExecution) {
  * \details Проверяет, что Calculate корректно обрабатывает набор из нескольких
  * испытаний за один вызов в немедленном режиме.
  */
-TEST_F(CalculationTest, OMPCalculation_Calculate_ImmediateExecution_MultiplePoints) {
+TEST_F(CalculationTest, OMPCalculation_Calculate_ImmediateExecution_MultiplePoints) 
+{
   OMPCalculation calc(*leafTask);
   InformationForCalculation inputSet;
   TResultForCalculation outputSet;
@@ -285,7 +253,8 @@ TEST_F(CalculationTest, OMPCalculation_Calculate_ImmediateExecution_MultiplePoin
  * поле outputSet.procLevel не изменяется. Тест фиксирует это фактическое поведение.
  * (Если в будущем procLevel начнёт заполняться — тест нужно обновить.)
  */
-TEST_F(CalculationTest, OMPCalculation_Calculate_DoesNotFillProcLevel) {
+TEST_F(CalculationTest, OMPCalculation_Calculate_DoesNotFillProcLevel) 
+{
   OMPCalculation calc(*leafTask);
   InformationForCalculation inputSet;
   TResultForCalculation outputSet;
@@ -311,7 +280,8 @@ TEST_F(CalculationTest, OMPCalculation_Calculate_DoesNotFillProcLevel) {
  * Проверяем лишь, что повторные вызовы согласованы между собой: либо оба
  * возвращают nullptr, либо оба возвращают один и тот же закэшированный объект.
  */
-TEST_F(CalculationTest, Factory_CreateCalculation_NonLeafTask_ConsistentBehavior) {
+TEST_F(CalculationTest, Factory_CreateCalculation_NonLeafTask_ConsistentBehavior) 
+{
   parameters.TypeCalculation = OMP;
 
   Calculation* calc1 = CalculationFactory::CreateCalculation(*nonLeafTask);
@@ -326,7 +296,8 @@ TEST_F(CalculationTest, Factory_CreateCalculation_NonLeafTask_ConsistentBehavior
  * \details Проверяем только документированный контракт (сохранение значения),
  * не делая предположений о побочном изменении флага isStartComputingAway при 0.
  */
-TEST_F(CalculationTest, BaseCalculation_SetCountCalculation_StoresValue) {
+TEST_F(CalculationTest, BaseCalculation_SetCountCalculation_StoresValue) 
+{
   OMPCalculation calc(*leafTask);
 
   calc.SetCountCalculation(0);
@@ -341,7 +312,8 @@ TEST_F(CalculationTest, BaseCalculation_SetCountCalculation_StoresValue) {
  * \details Проверяет, что Calculate накапливает испытания при нескольких вызовах
  * и выполняет их все вместе, когда счетчик достигает нуля.
  */
-TEST_F(CalculationTest, OMPCalculation_Calculate_AccumulatedExecution) {
+TEST_F(CalculationTest, OMPCalculation_Calculate_AccumulatedExecution) 
+{
   OMPCalculation calc(*leafTask);
   Calculation::firstCalculation = &calc;
 
@@ -379,7 +351,8 @@ TEST_F(CalculationTest, OMPCalculation_Calculate_AccumulatedExecution) {
   EXPECT_DOUBLE_EQ(resultTrial2->FuncValues[0], 4.0 - 10.0);
   EXPECT_DOUBLE_EQ(resultTrial2->FuncValues[1], 4.0 + 10.0);
 
-  delete trial1;
+  Calculation::firstCalculation = nullptr;  // не давать TearDown сделать delete стекового объекта
+  delete trial1;                            // (для AccumulatedExecution)
   delete trial2;
 }
 
@@ -388,7 +361,8 @@ TEST_F(CalculationTest, OMPCalculation_Calculate_AccumulatedExecution) {
  * \details При SetCountCalculation(3) и одном накопленном вызове результат
  * ещё не должен быть сформирован.
  */
-TEST_F(CalculationTest, OMPCalculation_Calculate_AccumulationNotTriggeredEarly) {
+TEST_F(CalculationTest, OMPCalculation_Calculate_AccumulationNotTriggeredEarly) 
+{
   OMPCalculation calc(*leafTask);
   Calculation::firstCalculation = &calc;
 
@@ -410,7 +384,9 @@ TEST_F(CalculationTest, OMPCalculation_Calculate_AccumulationNotTriggeredEarly) 
   ASSERT_EQ(GetInputCalculation().trials.size(), 1);
   EXPECT_TRUE(GetResultCalculation().trials.empty());
 
-  delete trial;
+  Calculation::firstCalculation = nullptr;  // не давать TearDown сделать delete стекового объекта
+  delete trial;                            // (для AccumulatedExecution)
+
 }
 
 /**
@@ -418,7 +394,8 @@ TEST_F(CalculationTest, OMPCalculation_Calculate_AccumulationNotTriggeredEarly) 
  * \details Reset не должен приводить к падению и должен корректно вызываться
  * даже без предварительных вычислений.
  */
-TEST_F(CalculationTest, OMPCalculation_Reset_DoesNotCrash) {
+TEST_F(CalculationTest, OMPCalculation_Reset_DoesNotCrash) 
+{
   OMPCalculation calc(*leafTask);
   EXPECT_NO_THROW(calc.Reset());
 }
@@ -430,7 +407,8 @@ TEST_F(CalculationTest, OMPCalculation_Reset_DoesNotCrash) {
 /**
  * \brief Проверяет корректность работы сеттеров базового класса Calculation.
  */
-TEST_F(CalculationTest, BaseCalculation_Setters) {
+TEST_F(CalculationTest, BaseCalculation_Setters) 
+{
   OMPCalculation calc(*leafTask);
 
   Task* newTask = new Task(calculationProblem, 2);
@@ -451,7 +429,8 @@ TEST_F(CalculationTest, BaseCalculation_Setters) {
  * \details Согласно реализации, метод сохраняет значение счётчика и ВСЕГДА
  * устанавливает isStartComputingAway = false (в том числе при c == 0).
  */
-TEST_F(CalculationTest, BaseCalculation_SetCountCalculation_AlwaysDisablesImmediate) {
+TEST_F(CalculationTest, BaseCalculation_SetCountCalculation_AlwaysDisablesImmediate) 
+{
   OMPCalculation calc(*leafTask);
 
   calc.SetCountCalculation(0);
@@ -466,7 +445,8 @@ TEST_F(CalculationTest, BaseCalculation_SetCountCalculation_AlwaysDisablesImmedi
 /**
  * \brief Проверяет, что ContinueComputing базового класса не приводит к падению.
  */
-TEST_F(CalculationTest, BaseCalculation_ContinueComputing_DoesNotCrash) {
+TEST_F(CalculationTest, BaseCalculation_ContinueComputing_DoesNotCrash) 
+{
   OMPCalculation calc(*leafTask);
   EXPECT_NO_THROW(calc.ContinueComputing());
 }
@@ -474,7 +454,8 @@ TEST_F(CalculationTest, BaseCalculation_ContinueComputing_DoesNotCrash) {
 /**
  * \brief Проверяет, что после SetUp статические указатели сброшены.
  */
-TEST_F(CalculationTest, BaseCalculation_StaticPointers_ResetAfterSetUp) {
+TEST_F(CalculationTest, BaseCalculation_StaticPointers_ResetAfterSetUp) 
+{
   EXPECT_EQ(Calculation::firstCalculation, nullptr);
   EXPECT_EQ(Calculation::leafCalculation, nullptr);
   EXPECT_EQ(GetCountCalculation(), 0);
@@ -489,7 +470,8 @@ TEST_F(CalculationTest, BaseCalculation_StaticPointers_ResetAfterSetUp) {
  * \brief Проверяет базовые операции InformationForCalculation:
  * Resize, GetSize, ToZero и оператор [].
  */
-TEST_F(CalculationTest, InformationForCalculation_ResizeAndAccess) {
+TEST_F(CalculationTest, InformationForCalculation_ResizeAndAccess) 
+{
   InformationForCalculation info;
 
   info.Resize(3);
@@ -508,7 +490,9 @@ TEST_F(CalculationTest, InformationForCalculation_ResizeAndAccess) {
 /**
  * \brief Проверяет, что оператор [] выбрасывает исключение при выходе за границы.
  */
-TEST_F(CalculationTest, InformationForCalculation_OutOfRangeThrows) {
+TEST_F(CalculationTest, InformationForCalculation_OutOfRangeThrows) 
+{
+
   InformationForCalculation info;
   info.Resize(2);
 
@@ -519,7 +503,8 @@ TEST_F(CalculationTest, InformationForCalculation_OutOfRangeThrows) {
 /**
  * \brief Проверяет, что Clear очищает массив trials.
  */
-TEST_F(CalculationTest, InformationForCalculation_Clear) {
+TEST_F(CalculationTest, InformationForCalculation_Clear) 
+{
   InformationForCalculation info;
   Trial trial;
   info.trials.push_back(&trial);
@@ -532,7 +517,8 @@ TEST_F(CalculationTest, InformationForCalculation_Clear) {
 /**
  * \brief Проверяет операции Resize и Clear у TResultForCalculation.
  */
-TEST_F(CalculationTest, TResultForCalculation_ResizeAndClear) {
+TEST_F(CalculationTest, TResultForCalculation_ResizeAndClear) 
+{
   TResultForCalculation result;
 
   result.Resize(4);

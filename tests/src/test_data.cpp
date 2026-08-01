@@ -16,20 +16,18 @@ protected:
   SearchInterval interval1;
   SearchInterval interval2;
   SearchInterval interval3;
+
   void SetUp()
   {
     Extended::SetTypeID(etDouble);
-    int argc = 1;
-    int n = 5;
-    char* argv[1];
-    argv[0] = new char(8);
-    parameters.Init(argc, argv);
-    parameters.Dimension = n;
+    parameters.Dimension = 5;      // Init уже сделан глобально
     data = new SearchData(MaxNumOfFunc, DefaultSearchDataSize);
     interval1 = SetUpInterval(1.0, 2.0);
     interval2 = SetUpInterval(3.0, 4.0);
     interval3 = SetUpInterval(5.0, 6.0);
   }
+
+
   void TearDown()
   {
     delete data;
