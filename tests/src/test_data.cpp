@@ -3,6 +3,7 @@
 #include "TreeNode.h"
 #include "gtest/gtest.h"
 #include "Trial.h"
+#include "SearcDataIterator.h"
 
 /**
   Вспомогательный класс, помогающий задать начальную конфигурацию объекта
@@ -345,4 +346,313 @@ TEST_F(TSearchDataTest, can_refill_queue)
 
   data->PopFromGlobalQueue(&pInterval);
   ASSERT_DOUBLE_EQ(interval3.R, pInterval->R);
+}
+
+/**
+ * Проверка счётчика интервалов #GetCount после вставок.
+ */
+TEST_F(TSearchDataTest, count_increases_on_insert)
+{
+  EXPECT_EQ(data->GetCount(), 0);
+  data->InsertInterval(interval1);
+  EXPECT_EQ(data->GetCount(), 1);
+  data->InsertInterval(interval2);
+  data->InsertInterval(interval3);
+  EXPECT_EQ(data->GetCount(), 3);
+}
+
+/**
+ * Проверка #SetBestTrial / #GetBestTrial и пересчёта Z.
+ * При index == 0 значение Z[0] должно стать равным FuncValues[0].
+ */
+TEST_F(TSearchDataTest, can_set_and_get_best_trial)
+{
+  Trial* best = new Trial();
+  best->index = 0;
+  best->FuncValues[0] = 3.5;
+
+  data->SetBestTrial(best);
+
+  EXPECT_EQ(data->GetBestTrial(), best);
+  EXPECT_DOUBLE_EQ(data->Z[0], 3.5);
+
+  delete best;
+}
+
+/**
+ * При index == 0 и FuncValues[0] == MaxDouble Z[0] обнуляется.
+ */
+TEST_F(TSearchDataTest, set_best_trial_with_maxdouble_sets_zero_Z)
+{
+  Trial* best = new Trial(); // по умолчанию FuncValues[i] == MaxDouble
+  best->index = 0;
+
+  data->SetBestTrial(best);
+
+  EXPECT_DOUBLE_EQ(data->Z[0], 0.0);
+
+  delete best;
+}
+
+/**
+ * Проверка #GetBestIntervals: возвращаются интервалы в порядке убывания R.
+ */
+TEST_F(TSearchDataTest, can_get_best_intervals)
+{
+  data->InsertInterval(interval1); // R = 2.0
+  data->InsertInterval(interval2); // R = 4.0
+  data->InsertInterval(interval3); // R = 6.0
+
+  SearchInterval* result[2];
+  data->GetBestIntervals(result, 2);
+
+  ASSERT_DOUBLE_EQ(result[0]->R, 6.0);
+  ASSERT_DOUBLE_EQ(result[1]->R, 4.0);
+}
+
+/**
+ * Проверка #FindMax: возвращает максимальный элемент без извлечения из очереди.
+ */
+TEST_F(TSearchDataTest, find_max_does_not_remove_element)
+{
+  data->InsertInterval(interval1);
+  data->InsertInterval(interval2);
+  data->InsertInterval(interval3);
+
+  data->RefillQueue();
+
+  SearchInterval& maxInterval = data->FindMax();
+  ASSERT_DOUBLE_EQ(maxInterval.R, interval3.R);
+
+  // Повторный вызов должен вернуть тот же максимум (элемент не извлечён).
+  SearchInterval& maxInterval2 = data->FindMax();
+  ASSERT_DOUBLE_EQ(maxInterval2.R, interval3.R);
+}
+
+/**
+ * Проверка #SetRecalc / #IsRecalc.
+ */
+TEST_F(TSearchDataTest, can_set_and_get_recalc_flag)
+{
+  data->SetRecalc(true);
+  EXPECT_TRUE(data->IsRecalc());
+  data->SetRecalc(false);
+  EXPECT_FALSE(data->IsRecalc());
+}
+
+/**
+ * Проверка #GetNumOfFuncs.
+ */
+TEST_F(TSearchDataTest, get_num_of_funcs_returns_correct_value)
+{
+  EXPECT_EQ(data->GetNumOfFuncs(), MaxNumOfFunc);
+}
+
+/**
+ * Проверка #GetQueueSize: возвращает максимальный размер очереди.
+ */
+TEST_F(TSearchDataTest, get_queue_size_returns_max_size)
+{
+  EXPECT_EQ(data->GetQueueSize(), DefaultQueueSize);
+}
+
+/**
+ * Проверка обхода дерева итератором в порядке возрастания xl.
+ */
+TEST_F(TSearchDataTest, iterator_traverses_in_ascending_order)
+{
+  data->InsertInterval(interval3); // xl = 5
+  data->InsertInterval(interval1); // xl = 1
+  data->InsertInterval(interval2); // xl = 3
+
+  SearcDataIterator it = data->GetBeginIterator();
+  ASSERT_TRUE((void*)it != nullptr);
+  ASSERT_DOUBLE_EQ(it->xl().toDouble(), 1.0);
+  ++it;
+  ASSERT_DOUBLE_EQ(it->xl().toDouble(), 3.0);
+  ++it;
+  ASSERT_DOUBLE_EQ(it->xl().toDouble(), 5.0);
+  ++it;
+  EXPECT_EQ((void*)it, nullptr);
+}
+
+/**
+ * Проверка декремента итератора (#Previous).
+ */
+TEST_F(TSearchDataTest, iterator_decrement_moves_back)
+{
+  data->InsertInterval(interval1);
+  data->InsertInterval(interval2);
+  SearchInterval* p3 = data->InsertInterval(interval3);
+
+  SearcDataIterator it = data->GetIterator(p3); // указывает на xl = 5
+  ASSERT_DOUBLE_EQ(it->xl().toDouble(), 5.0);
+  --it;
+  ASSERT_DOUBLE_EQ(it->xl().toDouble(), 3.0);
+  --it;
+  ASSERT_DOUBLE_EQ(it->xl().toDouble(), 1.0);
+}
+
+/**
+ * Проверка #DeleteIntervalFromQueue: удаление уменьшает очередь.
+ */
+TEST_F(TSearchDataTest, can_delete_interval_from_queue)
+{
+  SearchInterval* p1 = data->InsertInterval(interval1);
+  SearchInterval* p2 = data->InsertInterval(interval2);
+  SearchInterval* p3 = data->InsertInterval(interval3);
+
+  data->RefillQueue();
+
+  // Удаляем интервал с максимальным R (interval3).
+  data->DeleteIntervalFromQueue(p3);
+
+  // Теперь максимум — interval2.
+  SearchInterval& maxInterval = data->FindMax();
+  ASSERT_DOUBLE_EQ(maxInterval.R, interval2.R);
+}
+
+// ================================================================
+// Тесты для SearchInterval
+// ================================================================
+
+/**
+ * Проверка zl()/zr(): при index < 0 возвращается MaxDouble.
+ */
+TEST_F(TSearchDataTest, interval_returns_maxdouble_when_index_negative)
+{
+  SearchInterval interval = SetUpInterval(1.0, 2.0);
+  // По умолчанию index == -2 для обеих точек.
+  ASSERT_DOUBLE_EQ(interval.zl(), MaxDouble);
+  ASSERT_DOUBLE_EQ(interval.zr(), MaxDouble);
+  EXPECT_EQ(interval.izl(), -2);
+  EXPECT_EQ(interval.izr(), -2);
+}
+
+/**
+ * Проверка zl()/zr(): при index >= 0 возвращается FuncValues[index].
+ */
+TEST_F(TSearchDataTest, interval_returns_func_value_when_index_valid)
+{
+  SearchInterval interval = SetUpInterval(1.0, 2.0);
+  interval.LeftPoint->index = 0;
+  interval.LeftPoint->FuncValues[0] = -5.0;
+  interval.RightPoint->index = 0;
+  interval.RightPoint->FuncValues[0] = 7.0;
+
+  ASSERT_DOUBLE_EQ(interval.zl(), -5.0);
+  ASSERT_DOUBLE_EQ(interval.zr(), 7.0);
+  EXPECT_EQ(interval.izl(), 0);
+  EXPECT_EQ(interval.izr(), 0);
+}
+
+/**
+ * Проверка discreteValuesIndex(): совпадающие индексы возвращаются корректно.
+ */
+TEST_F(TSearchDataTest, interval_discrete_index_returns_value_when_equal)
+{
+  SearchInterval interval = SetUpInterval(1.0, 2.0);
+  interval.LeftPoint->discreteValuesIndex = 3;
+  interval.RightPoint->discreteValuesIndex = 3;
+
+  EXPECT_EQ(interval.discreteValuesIndex(), 3);
+}
+
+/**
+ * Проверка discreteValuesIndex(): при рассогласовании индексов бросается исключение.
+ */
+TEST_F(TSearchDataTest, interval_discrete_index_throws_when_mismatch)
+{
+  SearchInterval interval = SetUpInterval(1.0, 2.0);
+  interval.LeftPoint->discreteValuesIndex = 1;
+  interval.RightPoint->discreteValuesIndex = 2;
+
+  ASSERT_ANY_THROW(interval.discreteValuesIndex());
+}
+
+/**
+ * Проверка конструктора копирования SearchInterval.
+ */
+TEST_F(TSearchDataTest, interval_copy_constructor_copies_fields)
+{
+  SearchInterval original = SetUpInterval(2.0, 9.0);
+  original.locR = 3.3;
+  original.ind = 7;
+  original.K = 4;
+
+  SearchInterval copy(original);
+
+  EXPECT_EQ(copy.LeftPoint, original.LeftPoint);
+  EXPECT_EQ(copy.RightPoint, original.RightPoint);
+  ASSERT_DOUBLE_EQ(copy.R, 9.0);
+  ASSERT_DOUBLE_EQ(copy.locR, 3.3);
+  EXPECT_EQ(copy.ind, 7);
+  EXPECT_EQ(copy.K, 4);
+}
+
+/**
+ * Проверка операторов сравнения SearchInterval (==, <, >) по левой точке.
+ */
+TEST_F(TSearchDataTest, interval_comparison_operators)
+{
+  SearchInterval a = SetUpInterval(1.0, 2.0);
+  SearchInterval b = SetUpInterval(3.0, 2.0);
+  SearchInterval c = SetUpInterval(1.0, 5.0);
+
+  EXPECT_TRUE(a < b);
+  EXPECT_TRUE(b > a);
+  EXPECT_TRUE(a == c); // сравнение по xl, R не учитывается
+}
+
+// ================================================================
+// Тесты для связей точек (Trial::GetLeftPoint / GetRightPoint)
+// ================================================================
+
+/**
+ * После InsertPoint новая точка получает корректные соседние точки.
+ */
+TEST_F(TSearchDataTest, inserted_point_has_correct_neighbours)
+{
+  Trial point;
+  point = Extended(5.5);
+  point.index = 0;
+
+  data->InsertInterval(interval1);
+  SearchInterval* pCovering = data->InsertInterval(interval3); // [5,6]
+  data->InsertInterval(interval2);
+
+  SearchInterval* pNew = data->InsertPoint(pCovering, point, 1, 1);
+  ASSERT_NE(pNew, nullptr);
+
+  // point является левой точкой правого (нового) интервала
+  ASSERT_EQ(pNew->LeftPoint, &point);
+  // левый интервал точки — исходный covering
+  ASSERT_EQ(point.leftInterval, pCovering);
+  // правый интервал точки — новый
+  ASSERT_EQ(point.rightInterval, pNew);
+}
+
+/**
+ * InsertPoint возвращает NULL, если точка совпадает с концом интервала.
+ */
+TEST_F(TSearchDataTest, insert_point_returns_null_for_existing_point)
+{
+  SearchInterval* pCovering = data->InsertInterval(interval1); // [1,2]
+
+  Trial samePoint;
+  samePoint = Extended(1.0); // совпадает с LeftPoint
+  samePoint.index = 0;
+
+  SearchInterval* pNew = data->InsertPoint(pCovering, samePoint, 1, 1);
+  EXPECT_EQ(pNew, nullptr);
+}
+
+/**
+ * Проверка GetLeftPoint/GetRightPoint у Trial без установленных интервалов.
+ */
+TEST_F(TSearchDataTest, trial_neighbours_null_without_intervals)
+{
+  Trial t;
+  EXPECT_EQ(t.GetLeftPoint(), nullptr);
+  EXPECT_EQ(t.GetRightPoint(), nullptr);
 }
