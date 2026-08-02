@@ -71,13 +71,13 @@ public:
 #endif
 
   /// Код ошибки, возвращаемый, если операция завершена успешно
-  static const int ProblemOK = 0;
+  static constexpr int ProblemOK = 0;
   /** Код ошибки, возвращаемый методами #GetOptimumValue и #GetOptimumPoint,
   если соответствующие параметры задачи не определены,
   */
-  static const int ProblemUNDEFINED = -1;
+  static constexpr int ProblemUNDEFINED = -1;
   /// Код ошибки, возвращаемый, если операция не выполнена
-  static const int ProblemERROR = -2;
+  static constexpr int ProblemERROR = -2;
 
   /// Возвращает точку глобального оптимума для функции fNumber
   virtual int GetConstraintOptimumPoint(double* point, int fNumber) = 0;

@@ -11,10 +11,10 @@ QueueBaseData tmp1;
 class TQueueTest : public ::testing::Test
 {
 protected:
-  static const int MaxQueueSize = 67108863;
+  static constexpr int MaxQueueSize = 67108863;
   /// Указатель на очередь
   PriorityQueue* queue;
-  static const int maxSize = 3;
+  static constexpr int maxSize = 3;
   void SetUp()
   {
     queue = new PriorityQueue(maxSize);

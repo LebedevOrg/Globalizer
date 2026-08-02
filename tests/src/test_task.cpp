@@ -15,11 +15,11 @@ class TaskTest : public ::testing::Test
 {
 protected:
   /// Размерность задачи
-  static const int n = 5;
+  static constexpr int n = 5;
   /// Размерность подзадачи
-  static const int freeN = 2;
+  static constexpr int freeN = 2;
   /// Число функционалов
-  static const int numOfFunc = 1;
+  static constexpr int numOfFunc = 1;
   /// Левая граница области поиска
   double A[MaxDim];
   /// Правая граница области поиска

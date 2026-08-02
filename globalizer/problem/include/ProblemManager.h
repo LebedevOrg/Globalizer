@@ -73,12 +73,12 @@ public:
   Код ошибки, возвращаемый методами #LoadProblemLibrary и #FreeProblemLibrary
   при успешном выполнении операций
   */
-  static const int OK_ = 0;
+  static constexpr int OK_ = 0;
   /**
   Код ошибки, возвращаемый методами #LoadProblemLibrary и #FreeProblemLibrary
   при ошибке во время выполнении операций
   */
-  static const int ERROR_ = -2;
+  static constexpr int ERROR_ = -2;
 
   ///Конструктор
   ProblemManager();

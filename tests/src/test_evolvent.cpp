@@ -8,10 +8,10 @@
 class EvolventTest : public ::testing::Test
 {
 protected:
-  static const int numOfPoint = 5;
-  static const int numOfDim = 5;
-  static const int numOfm = 7;
-  static const int maxOfDim = 10;
+  static constexpr int numOfPoint = 5;
+  static constexpr int numOfDim = 5;
+  static constexpr int numOfm = 7;
+  static constexpr int maxOfDim = 10;
   double y[maxOfDim];
   double A[maxOfDim];
   double B[maxOfDim];
