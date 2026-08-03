@@ -84,7 +84,7 @@ Trial::Trial(const Trial& trial)
   this->generatedTask = trial.generatedTask;
 
   creationTime = TimeSeconds();
-  this->iterationNumber = iterationNumber;
+  this->iterationNumber = trial.iterationNumber;
 }
 
 // ------------------------------------------------------------------------------------------------

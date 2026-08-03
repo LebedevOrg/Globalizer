@@ -99,7 +99,8 @@ Trial LocalMethod::StartOptimization()
       {
         Trial currentTrial;
         currentTrial.index = mBestPoint.index;
-        currentTrial.FuncValues[currentTrial.index] = nextFValue;
+        if (currentTrial.index >= 0 && currentTrial.index < MaxNumOfFunc)
+          currentTrial.FuncValues[currentTrial.index] = nextFValue;
 
         std::memcpy(currentTrial.y, mCurrentPoint, sizeof(OBJECTIV_TYPE)*mDimension);
         mSearchSequence.push_back(currentTrial);
