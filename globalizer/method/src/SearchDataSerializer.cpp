@@ -475,6 +475,8 @@ std::string SearchDataSerializer::TrialToJson(Trial* trial)
 
   json << "}";
 
+  delete[] point;
+
   return json.str();
 }
 
