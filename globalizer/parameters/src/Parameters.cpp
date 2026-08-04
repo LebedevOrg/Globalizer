@@ -135,7 +135,7 @@ void Parameters::SetDefaultParameters()
   InitOption(LibConfigPath, \0, "-libConf", "path to config a of library with the optimization problem", 1);
 
   InitOption(StopCondition, Accuracy, "-stopCond", "stop condition type", 1);
-  InitOption(IsStopByAnyLevel, true, "-isbal", "Is Stop By Any Level", 1);
+
   InitOption(IsPrintResultToConsole, true, "-isPRC", "Should print the results of the algorithm to the console", 1);
   InitOption(IterPointsSavePath, \0, "-sip", "path to save iterations points", 1);
   InitOption(PrintAdvancedInfo, 0, "-advInf", "print advanced statistics", 1);
@@ -149,12 +149,6 @@ void Parameters::SetDefaultParameters()
 
   InitOption(MpiBlockSize, 1, "-mbs", "Size of blocks in mpi calculation", 1);
 
-  InitOption(IsUseTaskR, false, "-iutr", "IsUseTaskR", 1);
-  InitOption(IsUseFullRecount, false, "-iufr", "IsUseFullRecount", 1);
-
-  InitOption(IsUseIntervalR, false, "-iuir", "IsUseIntervalR", 1);
-  InitOption(IsUseGlobalZ, false, "-iugz", "IsUseGlobalZ", 1);
-  InitOption(IsNotUseZ, false, "-inuz", "IsNotUseZ", 1);
 
 
   InitOption(TypeAddLocalPoint, NotTakenIntoAccountInStoppingCriterion, "-talp", "The type of adding local refinement points (0 - as normal points, 1 - local method points are not counted in the precision stopping criterion)", 1);
@@ -180,6 +174,8 @@ void Parameters::SetDefaultParameters()
   InitOption(AutomaticParametersSetting, false, "-IsAPS", "Enable automatic adjustment of optimization algorithm parameters, if disabled, default values are used.", 1);
 
   InitOption(FileSerializer, \0, "-fs", "The path to save and upload", 1);
+  InitOption(IsSerializeToDashBoard, false, "-IsSTDB", "Enable saving to JSON for dashboard", 1);
+
   
   InitOption(MaxIterationsWithoutImprovement, 100, "-MIWI", "The maximum number of iterations without improvement, works only with the MaxIterWithoutImprovement stop criterion", 1);
 
@@ -383,6 +379,28 @@ std::string Parameters::GetPlotFileName()
     return PlotFileName.ToString();
   }
 }
+
+// ------------------------------------------------------------------------------------------------
+/// Возвращает имя файла  json файла для построения DashBoard
+std::string Parameters::GetJsonFileName()
+{  
+  if (FileSerializer.ToString() == "")
+  {
+    std::string res = "";
+    res += "globalizer_";
+    if (this->LibPath.GetIsChange())
+      res += this->LibPath.ToString();
+    else
+      res += getCurrentDateTime();
+    res += +".json";
+    return res;
+  }
+  else
+  {
+    return FileSerializer.ToString();
+  }
+}
+
 
 // ------------------------------------------------------------------------------------------------
 /// Инициализация параметров

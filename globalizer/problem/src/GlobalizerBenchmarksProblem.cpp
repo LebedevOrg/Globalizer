@@ -41,6 +41,7 @@ GlobalizerBenchmarksProblem::GlobalizerBenchmarksProblem(IGlobalOptimizationProb
 void GlobalizerBenchmarksProblem::XtoYU(const double* x, std::vector<double>& y, std::vector<std::string>& u) const
 {
   y.resize(problem->GetNumberOfContinuousVariable());
+  u.resize(problem->GetNumberOfDiscreteVariable());
   int i = 0;
   for (; i < problem->GetNumberOfContinuousVariable(); i++)
   {
@@ -222,6 +223,15 @@ int GlobalizerBenchmarksProblem::GetAllDiscreteValues(int discreteVariable, doub
     GetNextDiscreteValues(mCurrentDiscreteValueIndex, values[i], discreteVariable);
   }
   return IProblem::OK;
+}
+
+std::vector<std::vector<std::string>> GlobalizerBenchmarksProblem::GetDiscretesValues()
+{
+  std::vector< std::vector<std::string>> values;
+
+  problem->GetDiscreteVariableValues(values);
+
+  return values;
 }
 
 /**

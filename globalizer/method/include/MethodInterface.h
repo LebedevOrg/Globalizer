@@ -46,6 +46,9 @@
 class IMethod
 {
 public:
+  /// Виртуальный деструктор 
+  virtual ~IMethod() {}
+
   /** Функция выполняет первую итерацию метода
   */
   virtual void FirstIteration() = 0;

@@ -23,6 +23,7 @@
 #include "TrialFactory.h"
 #include "CalculationFactory.h"
 #include "ParallelHookeJeevesMethod.h"
+#include "SerializeToDashBoard.h"
 
 #include "OMPCalculation.h"
 
@@ -84,11 +85,11 @@ Method::Method(Task& _pTask, SearchData& _pData,
   iteration.pCurTrials.resize(parameters.NumPoints);
 
   //===========================================================================================================================================
-  mu = new double[pTask.GetNumOfFunc()];
-  for (int i = 0; i < pTask.GetNumOfFunc(); i++)
+  mu = new double[pTask.GetNumOfFunc() + 1];
+  for (int i = 0; i < pTask.GetNumOfFunc() + 1; i++)
     mu[i] = 0;
-  Xmax = new double[pTask.GetNumOfFunc()];
-  for (int i = 0; i < pTask.GetNumOfFunc(); i++)
+  Xmax = new double[pTask.GetNumOfFunc() + 1];
+  for (int i = 0; i < pTask.GetNumOfFunc() + 1; i++)
     Xmax[i] = 0;
   //===========================================================================================================================================
 
@@ -127,6 +128,10 @@ Method::Method(Task& _pTask, SearchData& _pData,
 // ------------------------------------------------------------------------------------------------
 Method::~Method()
 {
+  delete[] mu;    
+  mu = nullptr;
+  delete[] Xmax;  
+  Xmax = nullptr;
 }
 
 
@@ -228,11 +233,39 @@ void Method::LoadPoint()
   SearchDataSerializer::LoadedFileData fd;
   if (pointsPathExtension == "json")
   {
-    parameters.serializer->LoadFromFile(pointsPath, fd);
-    newPoint = fd.trials;
-    numberLoadedPoints = newPoint.size();
-    for (auto trial : newPoint)
-      pData->GetTrials().push_back(trial);
+    if (parameters.IsSerializeToDashBoard)
+    {
+      SerializeToDashBoard dashBoardSerializer;
+      Trial* outBestTrial = nullptr;
+
+      bool loadResult = dashBoardSerializer.LoadFromFile(pointsPath, newPoint, outBestTrial, &pTask);
+
+      if (loadResult)
+      {
+        numberLoadedPoints = newPoint.size();
+        for (auto trial : newPoint)
+          pData->GetTrials().push_back(trial);
+
+        // Если загружена лучшая точка - обновляем оценку оптимума
+        if (outBestTrial != nullptr)
+        {
+          UpdateOptimumEstimation(*outBestTrial);
+        }
+      }
+      else
+      {
+        print << "SerializeToDashBoard::LoadFromFile failed to load file: " << pointsPath << "\n";
+      }
+    }
+    else
+    {
+      parameters.serializer->LoadFromFile(pointsPath, fd);
+      newPoint = fd.trials;
+      numberLoadedPoints = newPoint.size();
+
+      for (auto trial : newPoint)
+        pData->GetTrials().push_back(trial);
+    }
   }
   else
   {
@@ -1171,6 +1204,13 @@ SearchInterval* Method::AddCurrentPoint(Trial& pCurTrialsj, SearchInterval* Best
   if (BestIntervalsj->izl() > j)
     j = BestIntervalsj->izl();
 
+  if (j < 0) 
+    j = 0; // отрицательные индексы (-2/-3) недопустимы
+
+  if (j > pTask.GetNumOfFunc()) 
+    j = pTask.GetNumOfFunc();
+
+
   if (Xmax[j] < (BestIntervalsj)->delta)
   {
     Xmax[j] = (BestIntervalsj)->delta;
@@ -1179,6 +1219,12 @@ SearchInterval* Method::AddCurrentPoint(Trial& pCurTrialsj, SearchInterval* Best
   j = NewInterval->izr();
   if (NewInterval->izl() > j)
     j = NewInterval->izl();
+
+  if (j < 0) 
+    j = 0;
+
+  if (j > pTask.GetNumOfFunc())
+    j = pTask.GetNumOfFunc();
 
   if (Xmax[j] < (NewInterval)->delta)
   {
@@ -1764,6 +1810,11 @@ void Method::SaveCurrentProgress()
     }
     intervalCounter++;
   }
+
+  std::string pointsPathExtension = GetFileExtension(parameters.FileSerializer.ToString());
+
+  if (pointsPathExtension == "")
+    parameters.FileSerializer = parameters.FileSerializer.ToString() + ".json";
 
   parameters.serializer->SaveProgress(parameters.FileSerializer.ToString(), newTrials, newIntervals, pData->GetBestTrial());
 

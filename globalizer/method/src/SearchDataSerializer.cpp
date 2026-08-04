@@ -475,6 +475,8 @@ std::string SearchDataSerializer::TrialToJson(Trial* trial)
 
   json << "}";
 
+  delete[] point;
+
   return json.str();
 }
 
@@ -1726,25 +1728,44 @@ bool SearchDataSerializer::LoadBestTrial(const std::map<std::string, std::string
   JSONParser bestParser(it->second);
   std::map<std::string, std::string> bestObj = bestParser.ParseObject();
 
-  double bestX = 0.0;
-  std::map<std::string, std::string>::const_iterator xIt = bestObj.find("x");
-  if (xIt != bestObj.end())
-  {
-    bestX = StringToDouble(xIt->second);
+  // Создаем временную точку из данных best_trial
+  Trial* tempTrial = CreateTrialFromJSON(bestObj);
+  if (!tempTrial) {
+    return false;
   }
 
-  // Ищем эту точку среди загруженных
-  std::map<double, Trial*>::const_iterator trialIt = trialMap.find(bestX);
-  if (trialIt != trialMap.end())
+  // Используем все поля точки для поиска
+  for (const auto& entry : trialMap) 
   {
-    bestTrial = trialIt->second;
-    return true;
+    Trial* candidate = entry.second;
+
+    // Сравниваем все поля точки
+    if (candidate->X() == tempTrial->X() &&
+      candidate->discreteValuesIndex == tempTrial->discreteValuesIndex &&
+      candidate->index == tempTrial->index) 
+    {
+
+      // Дополнительное сравнение значений функций
+      bool valuesMatch = true;
+      for (int i = 0; i < pSearchData->NumOfFuncs; i++) {
+        if (fabs(candidate->FuncValues[i] - tempTrial->FuncValues[i]) > 1e-12) {
+          valuesMatch = false;
+          break;
+        }
+      }
+
+      if (valuesMatch) {
+        bestTrial = candidate;
+        delete tempTrial;
+        return true;
+      }
+    }
   }
 
-  bestTrial = nullptr;
-  return false;
+  // Если не нашли, возвращаем временную точку как наилучшую
+  bestTrial = tempTrial;
+  return true;
 }
-
 
 
 

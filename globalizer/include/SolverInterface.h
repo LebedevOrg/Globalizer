@@ -39,6 +39,8 @@
 class ISolver
 {
 public:
+  /// Виртуальный деструктор
+  virtual ~ISolver() {}
   /// Решить задачу
   virtual int Solve() = 0;
   /// Добавляет точки испытаний

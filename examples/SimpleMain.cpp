@@ -66,6 +66,8 @@ int main(int argc, char* argv[])
     IProblem* problem = nullptr;
     parameters.IsPlot = true; // Включаем рисование графика функции с точками испытаний (сохраняются в файл)
 
+    parameters.IsSerializeToDashBoard = true;
+
     if (problemName == RASTRIGIN)
     {
         problem = new ProblemFromFunctionPointers(parameters.Dimension, // размерность задачи

@@ -3,309 +3,676 @@
 #include <math.h>
 
 #include "Method.h"
-#include "Common.h"
-#include "test_common.h"
-#include "ProblemManager.h"
-#include "test_config.h"
 #include "MethodFactory.h"
-using namespace std;
-/**
-  Вспомогательный класс, помогающий задать начальную конфигурацию объекта класса #Method,
-  которая будет использоваться в тестах
- */
-struct testParameters
-{
-  std::string libName;
-  std::string actualDataFile;
-  std::string expectedDataFile;
-  int dim;
-  testParameters(std::string _libName,
-    std::string _actualDataFile,
-    std::string _expectedDataFile,
-    int _dim) :
-    libName(_libName), actualDataFile(_actualDataFile), expectedDataFile(_expectedDataFile), dim(_dim) {}
-};
+#include "Common.h"
 
-class MethodTest : public ::testing::TestWithParam<testParameters>
+#include "SearchData.h"
+#include "Task.h"
+#include "Parameters.h"
+#include "Trial.h"
+#include "Evolvent.h"
+#include "EvolventFactory.h"
+#include "Calculation.h"
+#include "CalculationFactory.h"
+
+#include "test_reset.h"
+
+// Задача создаётся напрямую (как в SimpleMain.cpp) — без DLL и адаптеров.
+#include "ProblemFromFunctionPointers.h"
+
+#include <string>
+#include <vector>
+#include <functional>
+
+
+#include <cstdio>     // std::remove, std::fopen
+#include "TrialFactory.h"
+
+using namespace std;
+
+/**
+ * \brief Фикстура тестов класса Method.
+ *
+ * \details Ключевое отличие от прежней версии: задача создаётся НАПРЯМУЮ через
+ * ProblemFromFunctionPointers (наследник IProblem), точно как в SimpleMain.cpp.
+ * Это устраняет:
+ *   - загрузку DLL и связанные с ней падения;
+ *   - несовместимость vtable (IGlobalOptimizationProblem vs IProblem);
+ *   - необходимость в адаптере GlobalizerBenchmarksProblem.
+ *
+ * parameters — глобальный синглтон; Init вызывается один раз на процесс.
+ */
+class MethodTest : public ::testing::Test
 {
 protected:
-  static const int MaxNumOfTrials = 10000;
-  static const int CurL = 0;
-  static const int L = 1;
-  static const int m = 10;
-
-  double eps;
-  double r;
-  double reserv;
-
+  IProblem* pProblem;
   Task* pTask;
   SearchData* pData;
-  Parameters* parameters;
-  ProblemManager manager;
+  IEvolvent* pEvolvent;
+  Calculation* pCalculation;
 
-  void SetUp()
+
+  /// Задача Растригина как в SimpleMain.cpp (RASTRIGIN).
+  static IProblem* CreateRastrigin(int dim)
   {
-    SetUp(std::string(LIB_RASTRIGIN), 4);
+    return new ProblemFromFunctionPointers(
+      dim,                                        // размерность
+      std::vector<double>(dim, -2.2),             // нижняя граница
+      std::vector<double>(dim, 1.8),              // верхняя граница
+      std::vector<std::function<double(const double*)>>(1, [](const double* y)
+        {
+          const double pi_ = 3.14159265358979323846;
+          double sum = 0.0;
+          for (int j = 0; j < parameters.Dimension; j++)
+            sum += y[j] * y[j] - 10.0 * cos(2.0 * pi_ * y[j]) + 10.0;
+          return sum;
+        }),
+      true,                                       // оптимум определён
+      0.0,                                        // значение оптимума
+      std::vector<double>(dim, 0.0)               // координаты оптимума
+    );
   }
 
-  void TearDown()
+  void SetUp() override
   {
-    delete pTask;
-    delete pData;
-    delete parameters;
+    pProblem = nullptr; pTask = nullptr; pData = nullptr;
+    pEvolvent = nullptr; pCalculation = nullptr;
+
+    ResetParametersToMethodDefaults(4);
+    parameters.TypeMethod = StandartMethod;
+
+    ResetCalculationCache();  // ваш существующий метод (delete + nullptr)
+
+    pProblem = CreateRastrigin(4);
+    pProblem->Initialize();
+    pTask = new Task(pProblem, 0);
+    pData = new SearchData(MaxNumOfFunc, DefaultSearchDataSize);
+    pEvolvent = EvolventFactory::CreateEvolvent(pTask->GetN(), parameters.m);
+    ASSERT_NE(pEvolvent, nullptr);
+    pCalculation = CalculationFactory::CreateCalculation(*pTask, pEvolvent);
+    ASSERT_NE(pCalculation, nullptr);
   }
 
-  void SetUp(string libName, int n)
+  void TearDown() override
   {
-    eps = 0.01;
-    r = 2.3;
-    reserv = 0.001;
+    // Вычислитель держит указатель на pTask — уничтожаем его ПЕРВЫМ.
+    ResetCalculationCache();
+    pCalculation = nullptr;
 
-    IProblem* problem;
-    std::string LibPath = std::string(TESTDATA_BIN_PATH) + libName;
-    if (ProblemManager::OK_ == manager.LoadProblemLibrary(LibPath))
-    {
-      int argc = 1;
-      char* argv[1];
-      argv[0] = new char(8);
-      parameters = new Parameters();
-      parameters->Init(argc, argv);
-      problem = manager.GetProblem();
-      problem->SetDimension(n);
-      problem->SetConfigPath(parameters->LibConfigPath);
-      problem->Initialize();
-      pTask = new Task( problem, 0);
-
-      parameters->Dimension = n;
-      pData = new SearchData(MaxNumOfFunc, DefaultSearchDataSize);
-    }
-    else
-    {
-      pTask = NULL;
-    }
+    if (pEvolvent) { delete pEvolvent; pEvolvent = nullptr; }
+    if (pData) { delete pData;     pData = nullptr; }
+    if (pTask) { delete pTask;     pTask = nullptr; }
+    if (pProblem) { delete pProblem;  pProblem = nullptr; }
   }
 
-  bool DoIteration(Method* method)
+  bool DoIteration(IMethod* method)
   {
-    bool IsStop;
     method->CalculateIterationPoints();
-    IsStop = method->CheckStopCondition();
+    bool isStop = method->CheckStopCondition();
     method->CalculateFunctionals();
     method->EstimateOptimum();
     method->RenewSearchData();
     method->FinalizeIteration();
-    return IsStop;
+    return isStop;
+  }
+
+  void RunToStop(IMethod* method, int guardLimit = 5000)
+  {
+    method->FirstIteration();
+    bool isStop = false;
+    int guard = 0;
+    while (!isStop && guard < guardLimit)
+    {
+      isStop = DoIteration(method);
+      guard++;
+    }
+    ASSERT_LT(guard, guardLimit) << "Method did not stop within guard limit";
+  }
+
+  /// Полностью сбрасывает кэш вычислителей фабрики.
+/// ОБЯЗАТЕЛЬНО вызывать перед удалением Task, к которому привязан вычислитель.
+  static void ResetCalculationCache()
+  {
+    // Вычислители создаются фабрикой через new и кэшируются в статике.
+    // Их владелец — фабрика; безопасно удалить и обнулить указатели.
+    if (Calculation::leafCalculation)
+    {
+      delete Calculation::leafCalculation;
+      Calculation::leafCalculation = 0;
+    }
+    if (Calculation::firstCalculation)
+    {
+      delete Calculation::firstCalculation;
+      Calculation::firstCalculation = 0;
+    }
+  }
+
+  /// Пересоздаёт Problem/Task/SearchData/Evolvent/Calculation под новую размерность.
+  /// Корректно сбрасывает кэш вычислителя ПЕРЕД удалением старого Task.
+  void RebuildEnvironment(int dim)
+  {
+    // 1) Сначала выбросить вычислитель, который держит старый Task.
+    ResetCalculationCache();
+
+    // 2) Порядок удаления: сперва то, что ссылается (Method уже разрушен вызывающим),
+    //    затем данные, задача, развёртка, проблема.
+    if (pEvolvent) { delete pEvolvent; pEvolvent = nullptr; }
+    if (pData) { delete pData;     pData = nullptr; }
+    if (pTask) { delete pTask;     pTask = nullptr; }
+    if (pProblem) { delete pProblem;  pProblem = nullptr; }
+
+    parameters.Dimension = dim;
+
+    pProblem = CreateRastrigin(dim);
+    pProblem->Initialize();
+
+    pTask = new Task(pProblem, 0);
+    pData = new SearchData(MaxNumOfFunc, DefaultSearchDataSize);
+    pEvolvent = EvolventFactory::CreateEvolvent(pTask->GetN(), parameters.m);
+
+    // leafCalculation == 0 -> фабрика создаст НОВЫЙ вычислитель на новый Task.
+    pCalculation = CalculationFactory::CreateCalculation(*pTask, pEvolvent);
   }
 };
 
-//
-///**
-// * Проверка параметра Максимальное число испытаний #MaxNumOfTrials
-// * MaxNumOfTrials >=1
-// */
-//TEST_F(MethodTest, throws_when_create_with_not_positive_MaxNumOfTrials)
-//{
-//  ASSERT_ANY_THROW(Method method(0, eps, r, reserv, m, L, CurL,
-//    mpRotated, *parameters, pTask, pData));
-//}
-//
-///**
-// * Проверка параметра Точность решения задачи #Epsilon
-// * 0 < Epsilon <= 0.01
-// */
-//TEST_F(MethodTest, throws_when_create_with_not_positive_epsilon)
-//{
-//  ASSERT_ANY_THROW(Method method(MaxNumOfTrials, 0, r, reserv, m, L, CurL,
-//    mpRotated, *parameters, pTask, pData));
-//}
 
-//Нужно обсудить верхнюю границу
-//TEST_F(MethodTest, throws_when_create_with_too_large_epsilon)
-//{
-//  ASSERT_ANY_THROW(Method method(MaxNumOfTrials, 0.011, r, reserv, m, L, CurL,
-//                                  mpRotated, *parameters, pTask, pData));
-//}
+// ================================================================
+// --- Готовность окружения ---
+// ================================================================
 
-///**
-// * Проверка параметра Надежность метода #r
-// * r > 1
-// */
-//TEST_F(MethodTest, throws_when_create_with_too_low_r)
-//{
-//  ASSERT_ANY_THROW(Method method(MaxNumOfTrials, eps, 1, reserv, m, L, CurL,
-//    mpRotated, *parameters, pTask, pData));
-//}
-//
-///**
-// * Проверка параметра параметр eps-резервирования #reserv
-// * 0 <= reserv <= 0.5
-// */
-//TEST_F(MethodTest, throws_when_create_with_negative_reserv)
-//{
-//  ASSERT_ANY_THROW(Method method(MaxNumOfTrials, eps, r, -0.001, m, L, CurL,
-//    mpRotated, *parameters, pTask, pData));
-//}
-//
-//TEST_F(MethodTest, throws_when_create_with_too_large_reserv)
-//{
-//  ASSERT_ANY_THROW(Method method(MaxNumOfTrials, eps, r, 0.51, m, L, CurL,
-//    mpRotated, *parameters, pTask, pData));
-//}
+TEST_F(MethodTest, problem_and_objects_created)
+{
+  ASSERT_NE(pProblem, nullptr);
+  ASSERT_NE(pTask, nullptr);
+  ASSERT_NE(pData, nullptr);
+  ASSERT_NE(pEvolvent, nullptr);
+  ASSERT_NE(pCalculation, nullptr);
+  EXPECT_EQ(pTask->GetN(), 4);
+  // Rastrigin: 0 ограничений + 1 критерий => 1 функция.
+  EXPECT_EQ(pTask->GetNumOfFunc(), 1);
+}
+
+// ================================================================
+// --- Валидация параметров конструктора Method ---
+// ================================================================
+
+TEST_F(MethodTest, throws_when_MaxNumOfPoints_is_not_positive)
+{
+  parameters.MaxNumOfPoints = 0;
+  ASSERT_ANY_THROW(Method m(*pTask, *pData, *pCalculation, *pEvolvent));
+}
+
+TEST_F(MethodTest, throws_when_epsilon_is_not_positive)
+{
+  parameters.Epsilon = 0.0;
+  ASSERT_ANY_THROW(Method m(*pTask, *pData, *pCalculation, *pEvolvent));
+}
+
+TEST_F(MethodTest, throws_when_r_is_too_low)
+{
+  parameters.r = 1.0;
+  ASSERT_ANY_THROW(Method m(*pTask, *pData, *pCalculation, *pEvolvent));
+}
+
+TEST_F(MethodTest, throws_when_reserv_is_negative)
+{
+  parameters.rEps = -0.001;
+  ASSERT_ANY_THROW(Method m(*pTask, *pData, *pCalculation, *pEvolvent));
+}
+
+TEST_F(MethodTest, throws_when_reserv_is_too_large)
+{
+  parameters.rEps = 0.51;
+  ASSERT_ANY_THROW(Method m(*pTask, *pData, *pCalculation, *pEvolvent));
+}
+
+
+TEST_F(MethodTest, can_create_with_correct_values)
+{
+  ASSERT_NO_THROW(Method m(*pTask, *pData, *pCalculation, *pEvolvent));
+}
+
+TEST_F(MethodTest, factory_creates_standard_method)
+{
+  parameters.TypeMethod = StandartMethod;
+  IMethod* m = MethodFactory::CreateMethod(*pTask, *pData, *pCalculation, *pEvolvent);
+  ASSERT_NE(m, nullptr);
+  EXPECT_NE(dynamic_cast<Method*>(m), nullptr);
+  delete m;
+}
+
+// ================================================================
+// --- FirstIteration ---
+// ================================================================
+
+TEST_F(MethodTest, first_iteration_sets_iteration_count_to_one)
+{
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  method.FirstIteration();
+  EXPECT_EQ(method.GetIterationCount(), 1);
+}
+
+TEST_F(MethodTest, first_iteration_best_trial_not_yet_calculated)
+{
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  method.FirstIteration();
+  Trial* best = method.GetOptimEstimation();
+  ASSERT_NE(best, nullptr);
+  EXPECT_EQ(best->index, -2);
+}
+
+TEST_F(MethodTest, first_iteration_number_of_trials_is_zero)
+{
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  method.FirstIteration();
+  EXPECT_EQ(method.GetNumberOfTrials(), 0);
+}
+
+TEST_F(MethodTest, first_iteration_resets_achieved_accuracy)
+{
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  method.FirstIteration();
+  EXPECT_DOUBLE_EQ(method.GetAchievedAccuracy(), 1.0);
+}
+
+// ================================================================
+// --- FinalizeIteration ---
+// ================================================================
+
+TEST_F(MethodTest, finalize_iteration_increments_counter)
+{
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  method.FirstIteration();
+  int count = method.GetIterationCount();
+  method.FinalizeIteration();
+  EXPECT_EQ(method.GetIterationCount(), count + 1);
+}
+
+// ================================================================
+// --- Полный цикл / критерий остановки ---
+// ================================================================
+
+TEST_F(MethodTest, stops_when_reaches_max_iterations)
+{
+  parameters.MaxNumOfPoints = 5;
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  RunToStop(&method);
+  EXPECT_GE(method.GetIterationCount(), 5);
+}
+
+TEST_F(MethodTest, number_of_trials_grows_over_iterations)
+{
+  parameters.MaxNumOfPoints = 50;
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  method.FirstIteration();
+  int trialsBefore = method.GetNumberOfTrials();
+
+  bool isStop = false;
+  int guard = 0;
+  while (!isStop && guard < 500)
+  {
+    isStop = DoIteration(&method);
+    guard++;
+  }
+  EXPECT_GT(method.GetNumberOfTrials(), trialsBefore);
+}
+
+TEST_F(MethodTest, function_calculation_count_is_updated)
+{
+  parameters.MaxNumOfPoints = 30;
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  RunToStop(&method);
+
+  std::vector<int> counts = method.GetFunctionCalculationCount();
+  ASSERT_FALSE(counts.empty());
+  int total = 0;
+  for (int c : counts)
+  {
+    EXPECT_GE(c, 0);
+    total += c;
+  }
+  EXPECT_GT(total, 0);
+}
+
+TEST_F(MethodTest, optimum_estimation_is_computed_after_run)
+{
+  parameters.MaxNumOfPoints = 200;
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  RunToStop(&method);
+
+  Trial* best = method.GetOptimEstimation();
+  ASSERT_NE(best, nullptr);
+  // У Rastrigin индекс целевой функции = 0 (= GetNumOfFunc()-1).
+  EXPECT_EQ(best->index, pTask->GetNumOfFunc() - 1);
+  EXPECT_LE(method.GetAchievedAccuracy(), 1.0);
+}
+
+TEST_F(MethodTest, achieved_accuracy_does_not_increase)
+{
+  parameters.MaxNumOfPoints = 100;
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  method.FirstIteration();
+  double acc0 = method.GetAchievedAccuracy();
+
+  bool isStop = false;
+  int guard = 0;
+  while (!isStop && guard < 500)
+  {
+    isStop = DoIteration(&method);
+    guard++;
+  }
+  EXPECT_LE(method.GetAchievedAccuracy(), acc0);
+}
+
+// ================================================================
+// --- Проверка на другой размерности (2D) ---
+// ================================================================
+TEST_F(MethodTest, works_on_2d_rastrigin)
+{
+  parameters.MaxNumOfPoints = 100;
+
+  // Безопасно пересобираем окружение под размерность 2:
+  // сначала сбрасываем кэш вычислителя, потом удаляем старый Task.
+  RebuildEnvironment(2);
+
+  ASSERT_EQ(pTask->GetN(), 2);
+
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  RunToStop(&method);
+
+  Trial* best = method.GetOptimEstimation();
+  ASSERT_NE(best, nullptr);
+  EXPECT_EQ(best->index, 0);
+}
+
+
+// ================================================================
+// --- InsertPoints / EstimateOptimum / GetNumberOfTrials ---
+// ================================================================
 
 /**
- * Проверка параметра Плотность построения развертки #m
- * 2 <= m <= MaxM
+ * InsertPoints добавляет готовые испытания: увеличивает счётчики вычислений
+ * функций и число интервалов в базе.
  */
-//TEST_F(MethodTest, throws_when_create_with_too_low_m)
-//{
-//  ASSERT_ANY_THROW(Method method(MaxNumOfTrials, eps, r, reserv, 1, L, CurL,
-//    mpRotated, *parameters, pTask, pData));
-//}
+TEST_F(MethodTest, insert_points_adds_trials_and_updates_counts)
+{
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  method.FirstIteration();
 
-//TEST_F(MethodTest, throws_when_create_with_too_large_m)
-//{
-//  ASSERT_ANY_THROW(Method method(MaxNumOfTrials, eps, r, reserv, MaxM + 1, L, CurL,
-//    mpRotated, *parameters, pTask, pData));
-//}
+  int trialsBefore = method.GetNumberOfTrials();
+
+  // Готовим 3 вычисленные точки внутри области [-2.2, 1.8]^4.
+  std::vector<Trial*> pts;
+  const double coords[3][4] = {
+    { 0.0,  0.0,  0.0,  0.0 },
+    { 0.5, -0.5,  0.5, -0.5 },
+    {-1.0,  1.0, -1.0,  1.0 }
+  };
+  for (int k = 0; k < 3; ++k)
+  {
+    Trial* t = TrialFactory::CreateTrial();
+    for (int i = 0; i < pTask->GetN(); ++i)
+      t->y[i] = coords[k][i];
+    t->index = 0;                                  // целевая функция вычислена
+    t->FuncValues[0] = pTask->CalculateFuncs(t->y, 0);
+    t->K = 1;
+    pts.push_back(t);
+  }
+
+  method.InsertPoints(pts);
+
+  // Число интервалов (а значит и испытаний) должно вырасти.
+  EXPECT_GT(method.GetNumberOfTrials(), trialsBefore);
+
+  // Счётчик вычислений целевой функции должен увеличиться минимум на 3.
+  std::vector<int> counts = method.GetFunctionCalculationCount();
+  ASSERT_FALSE(counts.empty());
+  EXPECT_GE(counts[0], 3);
+}
 
 /**
- * Проверка параметра Число используемых разверток #L
- * Для сдвиговой разверки L <= #m, для вращаемой L <= N(N-1)+1
+ * После InsertPoints оценка оптимума становится валидной (index == 0)
+ * и её значение конечно.
  */
-//TEST_F(MethodTest, throws_when_create_with_not_positive_L)
-//{
-//  ASSERT_ANY_THROW(Method method(MaxNumOfTrials, eps, r, reserv, m, 0, CurL,
-//    mpRotated, *parameters, pTask, pData));
-//}
+TEST_F(MethodTest, insert_points_updates_optimum_estimation)
+{
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  method.FirstIteration();
 
-//TEST_F(MethodTest, throws_when_create_with_too_large_L_for_rotatedEvolvent)
-//{
-//  int N = pTask->GetN();
-//  ASSERT_ANY_THROW(Method method(MaxNumOfTrials, eps, r, reserv, m, N * (N - 1) + 2, CurL,
-//    mpRotated, *parameters, pTask, pData));
-//}
+  Trial* t = TrialFactory::CreateTrial();
+  for (int i = 0; i < pTask->GetN(); ++i)
+    t->y[i] = 0.0;                 // глобальный минимум Rastrigin -> 0
+  t->index = 0;
+  t->FuncValues[0] = pTask->CalculateFuncs(t->y, 0);
+  t->K = 1;
 
-//TEST_F(MethodTest, throws_when_create_with_too_large_L_for_ShiftedEvolvent)
-//{
-//  ASSERT_ANY_THROW(Method method(*parameters, *pTask, *pData));
-//}
+  std::vector<Trial*> pts = { t };
+  method.InsertPoints(pts);
+
+  Trial* best = method.GetOptimEstimation();
+  ASSERT_NE(best, nullptr);
+  EXPECT_EQ(best->index, 0);
+  EXPECT_NEAR(best->FuncValues[0], 0.0, 1e-6); // f(0,..,0) = 0
+}
 
 /**
- * Создание метода с корректными входными параметрами
+ * EstimateOptimum возвращает true, когда текущая точка улучшает оптимум.
  */
-//TEST_F(MethodTest, can_create_with_correct_values)
-//{
-//  ASSERT_NO_THROW(Method method(*parameters, *pTask, *pData));
-//}
-//
-///**
-// * Проверка метода #FirstIteration
-// */
-//TEST_F(MethodTest, on_FirstIteration_can_reset_IterationCount)
-//{
-//  Method* method = new Method(*parameters, *pTask, *pData);
-//  method->FirstIteration();
-//  ASSERT_EQ(1, method->GetIterationCount());
-//}
-//
-//TEST_F(MethodTest, on_FirstIteration_can_reset_BesTrial)
-//{
-//  Method* pMethod = new Method(*parameters, *pTask, *pData);
-//  pMethod->FirstIteration();
-//  ASSERT_EQ(-2, pMethod->GetOptimEstimation()[0].index);
-//}
-//
-//TEST_F(MethodTest, on_FirstIteration_can_reset_NumberOfTrials)
-//{
-//  Method* pMethod = new Method(*parameters, *pTask, *pData);
-//  pMethod->FirstIteration();
-//  ASSERT_EQ(0, pMethod->GetNumberOfTrials());
-//}
-//
-////TEST_F(MethodTest, on_FirstIteration_can_generate_new_points)
-////{
-////  Method* pMethod = new Method(*parameters, *pTask, *pData);
-////  pMethod->FirstIteration();
-////
-////  int NumPoints = parameters->NumPoints;
-////  double h = 1.0 / (NumPoints + 1);
-////  for (int i = 0; i < NumPoints; i++)
-////    ASSERT_EQ((i + 1) * h, pMethod->GetCurTrials()[i].x);
-////}
-//
-///**
-// * Проверка метода #FinalizeIteration
-// */
-//TEST_F(MethodTest, FinalizeIteration_can_increase_iterationCount_1)
-//{
-//  Method* pMethod = new Method(*parameters, *pTask, *pData);
-//  pMethod->SetBounds();
-//
-//  pMethod->FirstIteration();
-//  int count = pMethod->GetIterationCount();
-//  pMethod->FinalizeIteration();
-//
-//  ASSERT_EQ(++count, pMethod->GetIterationCount());
-//}
-//
-///**
-// * Проверка метода #CheckStopCondition
-// */
-//TEST_F(MethodTest, CheckStopCondition_can_stop_method_when_too_many_inerations)
-//{
-//  int currentMaxNumOfTrials = 2;
-//  Method* pMethod = new Method(currentMaxNumOfTrials, eps, r, reserv, m, L, CurL,
-//    mpRotated, *parameters, pTask, pData);
-//  pMethod->SetBounds();
-//  bool IsStop = false;
-//
-//  pMethod->FirstIteration();
-//  while (!IsStop)
-//  {
-//    IsStop = DoIteration(pMethod);
-//  }
-//
-//  ASSERT_GE(pMethod->GetIterationCount(), currentMaxNumOfTrials);
-//}
-//
-///**
-// * Проверка решения задач с различными функциями
-// */
-//TEST_P(MethodTest, check_states_of_method_iterations)
-//{
-//  tesParameters params = GetParam();
-//  std::string actualDataFile = std::string(TESTDATA_PATH) + std::string(params.actualDataFile);
-//  std::string expectedDataFile = std::string(TESTDATA_PATH) + std::string(params.expectedDataFile);
-//
-//  FILE* currentf = fopen(actualDataFile.c_str(), "w");
-//  fclose(currentf);
-//
-//  SetUp(std::string(params.libName), params.dim);
-//  Method* pMethod = new Method(MaxNumOfTrials, eps, r, reserv, m, L, CurL,
-//    mpBase, *parameters, pTask, pData);
-//  pMethod->SetBounds();
-//
-//  pMethod->FirstIteration();
-//  bool IsStop = false;
-//  while (!IsStop)
-//  {
-//    if (pMethod->GetIterationCount() % 10 == 0)
-//    {
-//      pMethod->PrintStateToFile(actualDataFile);
-//    }
-//    IsStop = DoIteration(pMethod);
-//  }
-//  CheckMetodIteration(expectedDataFile, actualDataFile, pMethod->GetIterationCount() / 10);
-//}
+TEST_F(MethodTest, estimate_optimum_reports_update)
+{
+  parameters.MaxNumOfPoints = 20;
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  method.FirstIteration();
 
-//INSTANTIATE_TEST_CASE_P(CheckMethod,
-//  MethodTest,
-//  ::testing::Values(
-//    testParameters(LIB_RASTRIGIN, "/actualRastriginState.dat", "/expectedRastriginState.dat", 4),
-//    testParameters(LIB_STRONGINC3, "/actualStronginc3State.dat", "/expectedStronginc3State.dat", 2)));
-/*INSTANTIATE_TEST_CASE_P(CheckRastrigin1,
-                        MethodTest,
-                        ::testing::Values(
-                        pair<string, string>("/actualRastriginState2.dat", "/expectedRastriginState.dat"),
-                        pair<string, string>("/actualRastriginState3.dat", "/expectedRastriginState.dat")));
-                        */
+  // Первая же полноценная итерация обычно обновляет оптимум с index==-2.
+  method.CalculateIterationPoints();
+  method.CheckStopCondition();
+  method.CalculateFunctionals();
+  bool updated = method.EstimateOptimum();
+
+  // После вычисления функционалов оптимум с "невычисленного" точно обновится.
+  EXPECT_TRUE(updated);
+}
+
+// ================================================================
+// --- Критерий остановки: MaxIterWithoutImprovement ---
+// ================================================================
+
+/**
+ * При StopCondition == MaxIterWithoutImprovement метод останавливается,
+ * когда долго нет улучшений (либо по достижению MaxNumOfPoints — как страховка).
+ */
+TEST_F(MethodTest, stops_by_max_iter_without_improvement)
+{
+  parameters.StopCondition = MaxIterWithoutImprovement;
+  parameters.MaxIterationsWithoutImprovement = 5;
+  parameters.MaxNumOfPoints = 1000; // не даём остановиться по числу испытаний слишком рано
+
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  RunToStop(&method, 5000);
+
+  // Метод обязан остановиться в пределах guard-лимита (проверено в RunToStop).
+  EXPECT_GT(method.GetIterationCount(), 1);
+}
+
+// ================================================================
+// --- Печать результатов в файл ---
+// ================================================================
+
+/**
+ * PrintPoints создаёт файл с корректным заголовком:
+ * первая строка = "<число точек> <число функций>".
+ */
+TEST_F(MethodTest, print_points_writes_file_with_header)
+{
+  parameters.MaxNumOfPoints = 40;
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  RunToStop(&method);
+
+  const std::string fname = "test_method_points_out.txt";
+  std::remove(fname.c_str());
+
+  method.PrintPoints(fname);
+
+  FILE* pf = std::fopen(fname.c_str(), "r");
+  ASSERT_NE(pf, nullptr) << "PrintPoints did not create the file";
+
+  int nPoints = -1, nFuncs = -1;
+  int read = std::fscanf(pf, "%d %d", &nPoints, &nFuncs);
+  std::fclose(pf);
+  std::remove(fname.c_str());
+
+  ASSERT_EQ(read, 2);
+  EXPECT_GE(nPoints, 0);
+  EXPECT_EQ(nFuncs, pTask->GetNumOfFunc());
+}
+
+/**
+ * PrintLevelPoints также создаёт непустой файл с корректным числом функций.
+ */
+TEST_F(MethodTest, print_level_points_writes_file)
+{
+  parameters.MaxNumOfPoints = 40;
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  RunToStop(&method);
+
+  const std::string fname = "test_method_level_points_out.txt";
+  std::remove(fname.c_str());
+
+  method.PrintLevelPoints(fname);
+
+  FILE* pf = std::fopen(fname.c_str(), "r");
+  ASSERT_NE(pf, nullptr);
+
+  int nPoints = -1, nFuncs = -1;
+  int read = std::fscanf(pf, "%d %d", &nPoints, &nFuncs);
+  std::fclose(pf);
+  std::remove(fname.c_str());
+
+  ASSERT_EQ(read, 2);
+  EXPECT_EQ(nFuncs, pTask->GetNumOfFunc());
+}
+
+// ================================================================
+// --- Локальный метод: геттеры без запуска ---
+// ================================================================
+
+/**
+ * Без локального уточнения (LocalRefineSolution == None) счётчики
+ * локального метода остаются нулевыми, а LocalSearch не приводит к падению.
+ */
+TEST_F(MethodTest, local_method_counters_zero_without_local_refine)
+{
+  parameters.LocalRefineSolution = None;
+  parameters.MaxNumOfPoints = 30;
+
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  RunToStop(&method);
+
+  EXPECT_EQ(method.GetLocalPointCount(), 0);
+  EXPECT_EQ(method.GetNumberLocalMethodtStart(), 0);
+
+  // Явный вызов LocalSearch при None не должен ничего запускать и падать.
+  EXPECT_NO_THROW(method.LocalSearch());
+  EXPECT_EQ(method.GetNumberLocalMethodtStart(), 0);
+}
+
+// ================================================================
+// --- PrintSection / SaveCurrentProgress ---
+// ================================================================
+
+/**
+ * PrintSection не падает ни при выключенной, ни при включённой печати сечений.
+ */
+TEST_F(MethodTest, print_section_does_not_crash)
+{
+  parameters.MaxNumOfPoints = 20;
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  RunToStop(&method);
+
+  parameters.IsPrintSectionPoint = false;
+  EXPECT_NO_THROW(method.PrintSection());
+
+  parameters.IsPrintSectionPoint = true;
+  EXPECT_NO_THROW(method.PrintSection());
+  parameters.IsPrintSectionPoint = false;
+}
+
+/**
+ * SaveCurrentProgress с пустым FileSerializer — это ранний выход (no-op).
+ */
+TEST_F(MethodTest, save_current_progress_noop_when_serializer_empty)
+{
+  parameters.FileSerializer = "";
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  method.FirstIteration();
+
+  // FirstIteration внутри вызывает SaveCurrentProgress — не должно падать,
+  // и файл создаваться не должен.
+  EXPECT_NO_THROW(method.RenewSearchData());
+}
+
+// ================================================================
+// --- Много точек за итерацию (NumPoints > 1) ---
+// ================================================================
+
+/**
+ * Метод корректно работает при NumPoints > 1 (несколько испытаний за итерацию).
+ */
+TEST_F(MethodTest, works_with_multiple_points_per_iteration)
+{
+  parameters.NumPoints = 3;
+  parameters.MaxNumOfPoints = 60;
+
+  // Пересоздаём объекты, зависящие от NumPoints не требуется — Method читает
+  // parameters.NumPoints в конструкторе, поэтому создаём метод уже с NumPoints=3.
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  RunToStop(&method);
+
+  EXPECT_GT(method.GetNumberOfTrials(), 3);
+  Trial* best = method.GetOptimEstimation();
+  ASSERT_NE(best, nullptr);
+  EXPECT_EQ(best->index, 0);
+
+  parameters.NumPoints = 1; // восстановление для последующих тестов
+}
+
+// ================================================================
+// --- Другие типы развёрток через фабрику ---
+// ================================================================
+
+/**
+ * Метод отрабатывает на линейной развёртке (mpLinar).
+ */
+TEST_F(MethodTest, runs_on_linear_evolvent)
+{
+  delete pEvolvent;
+  parameters.MapType = mpLinar;
+  pEvolvent = EvolventFactory::CreateEvolvent(pTask->GetN(), parameters.m);
+  ASSERT_NE(pEvolvent, nullptr);
+
+  parameters.MaxNumOfPoints = 40;
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  RunToStop(&method);
+
+  EXPECT_GT(method.GetIterationCount(), 1);
+  parameters.MapType = mpBase; // восстановление
+}
+
+/**
+ * Метод отрабатывает на сдвиговой развёртке (mpShifted).
+ */
+TEST_F(MethodTest, runs_on_shifted_evolvent)
+{
+  delete pEvolvent;
+  parameters.MapType = mpShifted;
+  pEvolvent = EvolventFactory::CreateEvolvent(pTask->GetN(), parameters.m);
+  ASSERT_NE(pEvolvent, nullptr);
+
+  parameters.MaxNumOfPoints = 40;
+  Method method(*pTask, *pData, *pCalculation, *pEvolvent);
+  RunToStop(&method);
+
+  EXPECT_GT(method.GetIterationCount(), 1);
+  parameters.MapType = mpBase; // восстановление
+}

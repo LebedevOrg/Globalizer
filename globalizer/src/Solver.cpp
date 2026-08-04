@@ -21,6 +21,9 @@
 #include <codecvt>
 #include <cwchar>
 
+#include "../../lib/nlohmann_json/json.hpp"
+
+#include "SerializeToDashBoard.h"
 
 // ------------------------------------------------------------------------------------------------
 void Solver::ClearData()
@@ -415,6 +418,20 @@ int Solver::Solve()
         mProcess->InsertPoints(*addPoints);
       mProcess->Solve();
 
+      if (parameters.IsSerializeToDashBoard)
+      {
+        if (parameters.FileSerializer.ToString().empty())
+        {
+          parameters.FileSerializer = parameters.GetJsonFileName();
+        }
+
+        auto result = this->GetSolutionResult();
+        std::vector<Trial*> bt;
+        bt.push_back(pData->GetBestTrial());
+        SerializeToDashBoard serializer;
+        serializer.SaveFullState("SerializeToDashBoard_" + parameters.FileSerializer.ToString(), pData, *result, pTask, parameters, pData->GetTrials(), bt);
+        
+      }
       if (parameters.IsPlot)
       {
 #ifdef USE_PYTHON
@@ -608,6 +625,8 @@ SolutionResult* Solver::GetSolutionResult()  /// best point
   result->BestTrial = mProcess->GetOptimEstimation();
   result->IterationCount = mProcess->GetIterationCount();
   result->TrialCount = mProcess->GetNumberOfTrials();
+  result->SolvingTime = mProcess->GetSolveTime();
+
   return result;
 }
 

@@ -67,7 +67,9 @@ int main(int argc, char* argv[])
     throw EXCEPTION("Error: solver.Solve crash!!!");
 
 
-  MPI_Finalize();
+  if (parameters.IsMPIInit())
+    MPI_Finalize();
+
   return 0;
 }
 // - end of file ----------------------------------------------------------------------------------

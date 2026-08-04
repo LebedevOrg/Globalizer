@@ -26,6 +26,8 @@ option(GLOBALIZER_ONE_MPI_PROCESS_PER_NODE "ONE PROCESS PER NODE" OFF)
 option(GLOBALIZER_PYTHON "Set ON to use Python" OFF)
 option(PYGlobalizer "Set ON to use Python interface" OFF)
 
+option(GLOBALIZER_USE_ASAN "Set ON to build with AddressSanitizer (diagnostics)" OFF)
+
 set(GLOBALIZER_DEBUG_SUFFIX   d)
 
 set(GLOBALIZER_EXECUTABLE_NAME                 ${GLOBALIZER_PROJECT_NAME}${GLOBALIZER_EXECUTABLE_SUFFIX})
@@ -100,6 +102,21 @@ elseif (IS_MICROSOFT_COMPILER)
 else()
   set(OpenMP_C_FLAGS "-fopenmp")
   set(OpenMP_CXX_FLAGS "-fopenmp")
+endif()
+
+if (GLOBALIZER_USE_ASAN)
+  message(STATUS "AddressSanitizer ENABLED")
+  if (IS_MICROSOFT_COMPILER)
+    # MSVC / clang-cl
+    add_compile_options(/fsanitize=address /Zi)
+    # ВАЖНО: с ASan под MSVC несовместим Edit&Continue и инкрементальная линковка
+    string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    string(REPLACE "/INCREMENTAL" "/INCREMENTAL:NO" CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+  else()
+    # GCC / Clang
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer -g)
+    add_link_options(-fsanitize=address)
+  endif()
 endif()
 
 

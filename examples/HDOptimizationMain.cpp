@@ -39,8 +39,9 @@ int main(int argc, char* argv[])
 
 #endif
 
+  if (parameters.IsMPIInit())
+    MPI_Finalize();
 
-  MPI_Finalize();
   return 0;
 }
 // - end of file ----------------------------------------------------------------------------------

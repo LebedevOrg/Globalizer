@@ -2,6 +2,8 @@
 
 #include "SearchInterval.h"
 
+#include <chrono>
+
 // ------------------------------------------------------------------------------------------------
 Trial* Trial::GetLeftPoint()
 {
@@ -28,6 +30,13 @@ Trial* Trial::GetRightPoint()
   return 0;
 }
 
+// ------------------------------------------------------------------------------------------------
+double TimeSeconds() 
+{
+  auto now = std::chrono::system_clock::now();
+  auto duration = now.time_since_epoch();
+  return std::chrono::duration<double>(duration).count();
+}
 
 // ------------------------------------------------------------------------------------------------
 Trial::Trial()
@@ -53,6 +62,9 @@ Trial::Trial()
   TypeColor = 0;
 
   generatedTask = 0;
+
+  creationTime = TimeSeconds();
+  iterationNumber = parameters.iterationNumber;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -70,6 +82,9 @@ Trial::Trial(const Trial& trial)
   this->lowAndUpPoints = trial.lowAndUpPoints;
   this->TypeColor = trial.TypeColor;
   this->generatedTask = trial.generatedTask;
+
+  creationTime = TimeSeconds();
+  this->iterationNumber = trial.iterationNumber;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -89,6 +104,7 @@ Trial* Trial::Clone()
   res->lowAndUpPoints = lowAndUpPoints;
   res->TypeColor = TypeColor;
   res->generatedTask = generatedTask;
+  res->iterationNumber = iterationNumber;
   return res;
 }
 

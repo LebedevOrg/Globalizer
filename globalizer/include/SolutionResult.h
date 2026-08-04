@@ -14,6 +14,8 @@ struct SolutionResult
   int IterationCount;
   /// количество испытаний
   int TrialCount;
+  /// Время решения задачи
+  double SolvingTime;
 };
 
 #endif
