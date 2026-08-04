@@ -7,8 +7,8 @@ set ROOT_DIR=%~dp0\..
 
 cd /d "%ROOT_DIR%"
 
-if not exist "build_64" mkdir build_64
-cd build_64
+if not exist "build_64_iOptProblem" mkdir build_64_iOptProblem
+cd build_64_iOptProblem
 
 git submodule init
 git submodule update
@@ -17,13 +17,13 @@ call conda init
 
 echo [1/5] Creating a Conda Environment...
 
-::call conda create -p "%ROOT_DIR%\build_64\Globalizer_env" python=3.12 -y
-::call conda create -p "%ROOT_DIR%\build_64\Globalizer_env" -c conda-forge/label/debug python=3.12 -y
+::call conda create -p "%ROOT_DIR%\build_64_iOptProblem\Globalizer_env" python=3.12 -y
+::call conda create -p "%ROOT_DIR%\build_64_iOptProblem\Globalizer_env" -c conda-forge/label/debug python=3.12 -y
 
-call conda create -p "%ROOT_DIR%\build_64\Globalizer_env" -c https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/ -c https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/ -c https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/r/ -c conda-forge python=3.12 -y
+call conda create -p "%ROOT_DIR%\build_64_iOptProblem\Globalizer_env" -c https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/ -c https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/ -c https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/r/ -c conda-forge python=3.12 -y
 
 echo [2/5] activate a Conda Environment...
-call conda activate "%ROOT_DIR%\build_64\Globalizer_env"
+call conda activate "%ROOT_DIR%\build_64_iOptProblem\Globalizer_env"
 
 echo [3/5] Installing the library...
 call pip install -r ..\third_party\Problems\Problems\iOptProblem\requirements.txt
@@ -35,7 +35,7 @@ echo [4/5] Start Intell OneAPI
 call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat" intel64 vs2022
 
 echo [5/5] CMake Configuration...
-call cmake -DGLOBALIZER_BUILD_PROBLEMS=ON  -DGLOBALIZER_BUILD_GCGEN=ON -DBUILD_ALL_TASK=ON -DGLOBALIZER_MAX_DIMENSION=130 -DGLOBALIZER_MAX_Number_Of_Function=70 -DGLOBALIZER_BUILD_TESTS=ON -DGLOBALIZER_USE_MPI=ON -DGLOBALIZER_MPI=intel -DGLOBALIZER_PYTHON=ON -DPython_FIND_DEBUG=OFF ..
+call cmake -DGLOBALIZER_BUILD_PROBLEMS=ON -DGLOBALIZER_USE_MP=ON -DGLOBALIZER_BUILD_GCGEN=ON -DBUILD_ALL_TASK=ON -DGLOBALIZER_MAX_DIMENSION=130 -DGLOBALIZER_MAX_Number_Of_Function=70 -DGLOBALIZER_BUILD_TESTS=ON -DGLOBALIZER_USE_MPI=ON -DGLOBALIZER_MPI=intel -DGLOBALIZER_PYTHON=ON -DPython_FIND_DEBUG=OFF -DPython_EXECUTABLE="%ROOT_DIR%\build_64_iOptProblem\Globalizer_env\python.exe" -DPython_ROOT_DIR="%ROOT_DIR%\build_64_iOptProblem\Globalizer_env" -DPython_FIND_STRATEGY=LOCATION  ..
 
 if %errorlevel% neq 0 goto error
 
@@ -44,7 +44,14 @@ if exist "globalizer.sln" (call "globalizer.sln") else if exist "globalizer.slnx
 
 
 cd /d "%START_DIR%"
-echo.
-
 exit /b 0
 
+:error
+echo.
+echo ========================================
+echo  BUILD CONFIGURATION FAILED (errorlevel %errorlevel%)
+echo  Смотрите сообщения выше.
+echo ========================================
+cd /d "%START_DIR%"
+pause
+exit /b 1

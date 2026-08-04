@@ -23,7 +23,14 @@ echo [2/2] Opening Visual Studio...
 if exist "globalizer.sln" (call "globalizer.sln") else if exist "globalizer.slnx" (call "globalizer.slnx") else echo Error: globalizer not found!
 
 cd /d "%START_DIR%"
-echo.
-
 exit /b 0
 
+:error
+echo.
+echo ========================================
+echo  BUILD CONFIGURATION FAILED (errorlevel %errorlevel%)
+echo  Смотрите сообщения выше.
+echo ========================================
+cd /d "%START_DIR%"
+pause
+exit /b 1

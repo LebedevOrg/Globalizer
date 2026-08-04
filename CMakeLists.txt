@@ -338,6 +338,15 @@ foreach(main_filename ${main_list})
     
     # Add and configure executable file to be produced
     add_executable(${GLOBALIZER_EXECUTABLE_NAME} ${main_filename})
+	
+    # --- порядок сборки: main зависит от MP-библиотек (см. блок для Globalizer_l) ---
+    if (${GLOBALIZER_USE_MP})
+      foreach(_mp_target libgmp mpir mpfr)
+        if (TARGET ${_mp_target})
+          add_dependencies(${GLOBALIZER_EXECUTABLE_NAME} ${_mp_target})
+        endif()
+      endforeach()
+    endif()
     
     target_include_directories(${GLOBALIZER_EXECUTABLE_NAME} PRIVATE ${GLOBALIZER_COMMON_SRC_DIR}
 	  											  PRIVATE ${Python_INCLUDE_DIRS} 
@@ -410,7 +419,33 @@ else()
 
 endif()
 
+# ------------------------------------------------------------------------------
+# Гарантируем правильный порядок сборки MP-библиотек (gmp/mpfr/mpir).
+#
+# Проблема: libgmp/mpfr/mpir линкуются к Globalizer_l "по имени" (gmp/mpfr/mpir)
+# через link_directories, а не как CMake-цели. Поэтому CMake НЕ видит зависимости
+# и MSBuild может собрать Globalizer_l РАНЬШЕ gmp -> "cannot open gmp.lib"
+# на первой сборке. add_dependencies заставляет собрать MP-цели ПЕРЕД Globalizer_l.
+#
+# ВАЖНО: имя цели GMP — libgmp (OUTPUT_NAME = gmp), цели MPFR/MPIR — mpfr/mpir.
+# ------------------------------------------------------------------------------
+if (${GLOBALIZER_USE_MP})
+  set(GLOBALIZER_MP_BUILD_TARGETS "")
+  foreach(_mp_target libgmp mpir mpfr)
+    if (TARGET ${_mp_target})
+      list(APPEND GLOBALIZER_MP_BUILD_TARGETS ${_mp_target})
+    else()
+      message(WARNING "MP dependency target '${_mp_target}' not found "
+                      "(check third_party/mpfr_gmp_mpir/*/CMakeLists.txt).")
+    endif()
+  endforeach()
 
+  if (GLOBALIZER_MP_BUILD_TARGETS)
+    add_dependencies(${GLOBALIZER_LIB_NAME} ${GLOBALIZER_MP_BUILD_TARGETS})
+    message(STATUS "MP build order enforced: ${GLOBALIZER_LIB_NAME} depends on "
+                   "${GLOBALIZER_MP_BUILD_TARGETS}")
+  endif()
+endif()
 
 message("MPI lib: " ${GLOBALIZER_LIB_NAME})
 

@@ -132,14 +132,14 @@ int Solver::DoIteration(bool& finished)
 {
   finished = false;
 
-  if (!m_initialized) return 1; 
+  if (!m_initialized) return 1;
   if (!mProcess || mProcess->IsOptimumFound)
   {
     finished = true;
     return 0;
   }
 
-  try 
+  try
   {
     mProcess->DoIteration();
 
@@ -160,26 +160,40 @@ int Solver::DoIteration(bool& finished)
     if (finished && parameters.IsPlot)
     {
 #ifdef USE_PYTHON
-        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-        std::wstring wstring = converter.from_bytes(parameters.GetPlotFileName());
-        wchar_t* output_file_name = new wchar_t[wstring.size() + 1];
-        wcscpy(output_file_name, wstring.c_str());
-        bool show_figure = parameters.ShowFigure;
-        bool hide_trials_points = parameters.HideTrialsPoints;
-        bool move_points_under_graph = parameters.MoveTrialPointsUnderGraph;
-        bool fill_feasible_region = parameters.FillFeasibleRegion;
-        bool hide_no_feasible_points = parameters.HideNoFeasiblePoints;
-        FigureTypes figure_type = parameters.FigureType;
-        CalcsTypes calcs_type = parameters.CalcsType;
-        CalcsTypes calcs_type_c = parameters.CalcsTypeC;
-        int levels = parameters.Levels;
-        int objective_grid_size = parameters.ObjectiveGridSize;
-        int constraints_grid_size = parameters.ConstraintsGridSize;
-        int continuous_params_num = this->pTask->GetNumberOfContinuousVariable();
+      std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+      std::wstring wstring = converter.from_bytes(parameters.GetPlotFileName());
+      wchar_t* output_file_name = new wchar_t[wstring.size() + 1];
+      wcscpy(output_file_name, wstring.c_str());
+      bool show_figure = parameters.ShowFigure;
+      bool hide_trials_points = parameters.HideTrialsPoints;
+      bool move_points_under_graph = parameters.MoveTrialPointsUnderGraph;
+      bool fill_feasible_region = parameters.FillFeasibleRegion;
+      bool hide_no_feasible_points = parameters.HideNoFeasiblePoints;
+      FigureTypes figure_type = parameters.FigureType;
+      CalcsTypes calcs_type = parameters.CalcsType;
+      CalcsTypes calcs_type_c = parameters.CalcsTypeC;
+      int levels = parameters.Levels;
+      int objective_grid_size = parameters.ObjectiveGridSize;
+      int constraints_grid_size = parameters.ConstraintsGridSize;
+      int continuous_params_num = this->pTask->GetNumberOfContinuousVariable();
 
-        Plotter::draw_plot(this->mProblem, GetSolutionResult(), { 0, 1 }, {}, continuous_params_num, output_file_name, figure_type, calcs_type, calcs_type_c, levels, objective_grid_size, constraints_grid_size, fill_feasible_region, hide_trials_points, hide_no_feasible_points, move_points_under_graph, show_figure);
+      Plotter::draw_plot(this->mProblem, GetSolutionResult(), { 0, 1 }, {}, continuous_params_num, output_file_name, figure_type, calcs_type, calcs_type_c, levels, objective_grid_size, constraints_grid_size, fill_feasible_region, hide_trials_points, hide_no_feasible_points, move_points_under_graph, show_figure);
 #else
-        print << "Plotter is not work!!!\nPython libraries doesn't find!!!\n";
+      print <<
+        "\n=======================================================================\n"
+        "WARNING: The launch was performed WITHOUT rendering using the built-in Plotter.\n"
+        "\n"
+        "To use the built-in plotter and visualize the problem being solved,\n"
+        "follow the instructions for building the project using Plotter:\n"
+        "\n"
+        "https://globalizer-documentation.readthedocs.io/en/latest/source/html/installation/inst-win.html\n"
+        "(Section 3.5: Building Globalizer for Plotter)\n"
+        "\n"
+        "or follow the instructions for starting visualization using existing files:\n"
+        "\n"
+        "https://globalizer-documentation.readthedocs.io/en/latest/source/html/start_of_work.html\n"
+        "(Section 3: Visualization)\n"
+        "=======================================================================\n\n";
 #endif
     }
 
@@ -430,7 +444,7 @@ int Solver::Solve()
         bt.push_back(pData->GetBestTrial());
         SerializeToDashBoard serializer;
         serializer.SaveFullState("SerializeToDashBoard_" + parameters.FileSerializer.ToString(), pData, *result, pTask, parameters, pData->GetTrials(), bt);
-        
+
       }
       if (parameters.IsPlot)
       {
@@ -444,7 +458,7 @@ int Solver::Solve()
         bool move_points_under_graph = parameters.MoveTrialPointsUnderGraph;
         bool fill_feasible_region = parameters.FillFeasibleRegion;
         bool hide_no_feasible_points = parameters.HideNoFeasiblePoints;
-        FigureTypes figure_type =parameters.FigureType;
+        FigureTypes figure_type = parameters.FigureType;
         CalcsTypes calcs_type = parameters.CalcsType;
         CalcsTypes calcs_type_c = parameters.CalcsTypeC;
         int levels = parameters.Levels;
@@ -454,7 +468,21 @@ int Solver::Solve()
 
         Plotter::draw_plot(this->mProblem, GetSolutionResult(), { 0, 1 }, {}, continuous_params_num, output_file_name, figure_type, calcs_type, calcs_type_c, levels, objective_grid_size, constraints_grid_size, fill_feasible_region, hide_trials_points, hide_no_feasible_points, move_points_under_graph, show_figure);
 #else
-        print << "Plotter is not work!!!\nPython libraries doesn't find!!!\n";
+        print <<
+          "\n=======================================================================\n"
+          "WARNING: The launch was performed WITHOUT rendering using the built-in Plotter.\n"
+          "\n"
+          "To use the built-in plotter and visualize the problem being solved,\n"
+          "follow the instructions for building the project using Plotter:\n"
+          "\n"
+          "https://globalizer-documentation.readthedocs.io/en/latest/source/html/installation/inst-win.html\n"
+          "(Section 3.5: Building Globalizer for Plotter)\n"
+          "\n"
+          "or follow the instructions for starting visualization using existing files:\n"
+          "\n"
+          "https://globalizer-documentation.readthedocs.io/en/latest/source/html/start_of_work.html\n"
+          "(Section 3: Visualization)\n"
+          "=======================================================================\n\n";
 #endif
       }
     }

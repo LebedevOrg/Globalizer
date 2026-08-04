@@ -30,7 +30,7 @@ call pip install -r ..\requirements.txt
 
 
 echo [4/4] CMake Configuration...
-call cmake -DGLOBALIZER_BUILD_PROBLEMS=ON  -DGLOBALIZER_BUILD_GCGEN=ON -DGLOBALIZER_MAX_DIMENSION=130 -DGLOBALIZER_MAX_Number_Of_Function=70 -DGLOBALIZER_BUILD_TESTS=ON -DGLOBALIZER_USE_MPI=OFF -DGLOBALIZER_PYTHON=ON -DPython_FIND_DEBUG=OFF -DPYGlobalizer=ON -Drastrigin_build=ON -DrastriginInt_build=ON -DX2_build=ON -Dpython_objective_build=ON -Dstronginc3_build=ON -DrastriginC1_build=ON -DiOptProblemSimple_build=ON ..
+call cmake -DGLOBALIZER_BUILD_PROBLEMS=ON  -DGLOBALIZER_BUILD_GCGEN=ON -DGLOBALIZER_MAX_DIMENSION=130 -DGLOBALIZER_MAX_Number_Of_Function=70 -DGLOBALIZER_BUILD_TESTS=ON -DGLOBALIZER_USE_MPI=OFF -DGLOBALIZER_PYTHON=ON -DPython_FIND_DEBUG=OFF -DPYGlobalizer=ON -Drastrigin_build=ON -DrastriginInt_build=ON -DX2_build=ON -Dpython_objective_build=ON -Dstronginc3_build=ON -DrastriginC1_build=ON -DiOptProblemSimple_build=ON -DPython_EXECUTABLE="%ROOT_DIR%\build_64\Globalizer_env\python.exe" -DPython_ROOT_DIR="%ROOT_DIR%\build_64\Globalizer_env" -DPython_FIND_STRATEGY=LOCATION  ..
 
 if %errorlevel% neq 0 goto error
 
@@ -38,7 +38,14 @@ echo [6/6] Opening Visual Studio...
 if exist "globalizer.sln" (call "globalizer.sln") else if exist "globalizer.slnx" (call "globalizer.slnx") else echo Error: globalizer not found!
 
 cd /d "%START_DIR%"
-echo.
-
 exit /b 0
 
+:error
+echo.
+echo ========================================
+echo  BUILD CONFIGURATION FAILED (errorlevel %errorlevel%)
+echo  Смотрите сообщения выше.
+echo ========================================
+cd /d "%START_DIR%"
+pause
+exit /b 1
