@@ -1,4 +1,4 @@
-/////////////////////////////////////////////////////////////////////////////
+п»ї/////////////////////////////////////////////////////////////////////////////
 //                                                                         //
 //             LOBACHEVSKY STATE UNIVERSITY OF NIZHNY NOVGOROD             //
 //                                                                         //
@@ -15,11 +15,11 @@
 
 /**
 \file PYProblem.h
-\authors Егоров К.С.
+\authors Р•РіРѕСЂРѕРІ Рљ.РЎ.
 \date 2026
-\copyright ННГУ им. Н.И. Лобачевского
-\brief Класс задач из Python
-\details Реализация парсинга задачи из Python и её хранение
+\copyright РќРќР“РЈ РёРј. Рќ.Р. Р›РѕР±Р°С‡РµРІСЃРєРѕРіРѕ
+\brief РљР»Р°СЃСЃ Р·Р°РґР°С‡ РёР· Python
+\details Р РµР°Р»РёР·Р°С†РёСЏ РїР°СЂСЃРёРЅРіР° Р·Р°РґР°С‡Рё РёР· Python Рё РµС‘ С…СЂР°РЅРµРЅРёРµ
 */
 
 #pragma once
@@ -35,7 +35,7 @@
 namespace py = pybind11;
 
 /**
-Класс, реализующий функционал хранения задачи и её передачи из Python
+РљР»Р°СЃСЃ, СЂРµР°Р»РёР·СѓСЋС‰РёР№ С„СѓРЅРєС†РёРѕРЅР°Р» С…СЂР°РЅРµРЅРёСЏ Р·Р°РґР°С‡Рё Рё РµС‘ РїРµСЂРµРґР°С‡Рё РёР· Python
 */
 class IOptProblem :public Problem<IOptProblem> {
 #undef OWNER_NAME
@@ -44,11 +44,11 @@ private:
 	std::string pName;
 	int numObjections, numConstraints, numFloatVars, numDiscVars;
 
-	/// Вектор функций задачи (ограничение + целевые функции)
+	/// Р’РµРєС‚РѕСЂ С„СѓРЅРєС†РёР№ Р·Р°РґР°С‡Рё (РѕРіСЂР°РЅРёС‡РµРЅРёРµ + С†РµР»РµРІС‹Рµ С„СѓРЅРєС†РёРё)
 	std::vector<std::function<double(const double*)>> functionsOfProblem;
-	/// Нижняя граница поиска
+	/// РќРёР¶РЅСЏСЏ РіСЂР°РЅРёС†Р° РїРѕРёСЃРєР°
 	std::vector<double> lowerBounds;
-	/// Верхняя граница поиска
+	/// Р’РµСЂС…РЅСЏСЏ РіСЂР°РЅРёС†Р° РїРѕРёСЃРєР°
 	std::vector<double> upperBounds;
 	std::vector<std::vector<std::string>> discreteValues;	//!!!
 	std::vector<std::string> floatNames;
@@ -60,10 +60,10 @@ private:
 	std::vector<double> optimumCoordinate;
 	//known optimum here
 public:
-	/// Конструктор - принимает в качестве параметра Python-объект
+	/// РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ - РїСЂРёРЅРёРјР°РµС‚ РІ РєР°С‡РµСЃС‚РІРµ РїР°СЂР°РјРµС‚СЂР° Python-РѕР±СЉРµРєС‚
 	IOptProblem(py::object data);
-	/// Метод, возвращающий границы поиска
+	/// РњРµС‚РѕРґ, РІРѕР·РІСЂР°С‰Р°СЋС‰РёР№ РіСЂР°РЅРёС†С‹ РїРѕРёСЃРєР°
 	virtual void GetBounds(double* lower, double* upper);
-	/// Вычисление значения функции y с номером fNumber из вектора функций
+	/// Р’С‹С‡РёСЃР»РµРЅРёРµ Р·РЅР°С‡РµРЅРёСЏ С„СѓРЅРєС†РёРё y СЃ РЅРѕРјРµСЂРѕРј fNumber РёР· РІРµРєС‚РѕСЂР° С„СѓРЅРєС†РёР№
 	virtual double CalculateFunctionals(const double* y, int fNumber);
 };

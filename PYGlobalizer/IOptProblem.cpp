@@ -1,6 +1,6 @@
-#include "IOptProblem.h"
+п»ї#include "IOptProblem.h"
 
-/// Реализация конструктора
+/// Р РµР°Р»РёР·Р°С†РёСЏ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂР°
 IOptProblem::IOptProblem(py::object data) {
 	if (py::hasattr(data, "name") && py::hasattr(data, "dimension") && py::hasattr(data, "number_of_float_variables")
 	&& py::hasattr(data, "number_of_discrete_variables") && py::hasattr(data, "number_of_objectives")
@@ -12,14 +12,14 @@ IOptProblem::IOptProblem(py::object data) {
 		this->mDim = data.attr("dimension").cast<int>();
 		this->mNumberOfConstraints = data.attr("number_of_constraints").cast<int>();
 		this->mNumberOfCriterions = data.attr("number_of_objectives").cast<int>();
-		/// Задание нижней границы из поля "lower_bound_of_float_variables" переданного Python-объекта
+		/// Р—Р°РґР°РЅРёРµ РЅРёР¶РЅРµР№ РіСЂР°РЅРёС†С‹ РёР· РїРѕР»СЏ "lower_bound_of_float_variables" РїРµСЂРµРґР°РЅРЅРѕРіРѕ Python-РѕР±СЉРµРєС‚Р°
 		if (py::hasattr(data, "lower_bound_of_float_variables")) {
 			py::list lowerList = data.attr("lower_bound_of_float_variables");
 			for (auto item : lowerList) {
 				lowerBounds.push_back(item.cast<double>());
 			}
 		}
-		/// Задание верхней границы из поля "upper_bound_of_float_variables" переданного Python-объекта
+		/// Р—Р°РґР°РЅРёРµ РІРµСЂС…РЅРµР№ РіСЂР°РЅРёС†С‹ РёР· РїРѕР»СЏ "upper_bound_of_float_variables" РїРµСЂРµРґР°РЅРЅРѕРіРѕ Python-РѕР±СЉРµРєС‚Р°
 		if (py::hasattr(data, "upper_bound_of_float_variables")) {
 			py::list upperList = data.attr("upper_bound_of_float_variables");
 			for (auto item : upperList) {
@@ -48,7 +48,7 @@ IOptProblem::IOptProblem(py::object data) {
 		//functionsOfProblem.push_back(data.attr("calculate").cast<std::function>());
 	}
 }
-/// Реализация метода, возвращающего границы поиска
+/// Р РµР°Р»РёР·Р°С†РёСЏ РјРµС‚РѕРґР°, РІРѕР·РІСЂР°С‰Р°СЋС‰РµРіРѕ РіСЂР°РЅРёС†С‹ РїРѕРёСЃРєР°
 void IOptProblem::GetBounds(double* lower, double* upper) {
 	for (int i = 0; i < Dimension; i++)
 	{
@@ -56,7 +56,7 @@ void IOptProblem::GetBounds(double* lower, double* upper) {
 		upper[i] = upperBounds[i];
 	}
 }
-/// Реализация метода, вычисляющего значение функции в точке
+/// Р РµР°Р»РёР·Р°С†РёСЏ РјРµС‚РѕРґР°, РІС‹С‡РёСЃР»СЏСЋС‰РµРіРѕ Р·РЅР°С‡РµРЅРёРµ С„СѓРЅРєС†РёРё РІ С‚РѕС‡РєРµ
 double IOptProblem::CalculateFunctionals(const double* y, int fNumber) {
 	std::cout << "fNumber: " << fNumber << std::endl;
 	std::cout << "functionsOfProblem.size() = " << functionsOfProblem.size() << std::endl;
@@ -65,7 +65,7 @@ double IOptProblem::CalculateFunctionals(const double* y, int fNumber) {
 
 	double temp = 0.0;
 
-	/// Дополнительная проверка на корректность получения функций
+	/// Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅР°СЏ РїСЂРѕРІРµСЂРєР° РЅР° РєРѕСЂСЂРµРєС‚РЅРѕСЃС‚СЊ РїРѕР»СѓС‡РµРЅРёСЏ С„СѓРЅРєС†РёР№
 	try {
 		temp = functionsOfProblem[fNumber](y);
 	}
