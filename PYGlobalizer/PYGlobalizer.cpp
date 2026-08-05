@@ -58,12 +58,6 @@ void solve(py::object& data, int maxParams = 50, double r = 5, bool localRefineS
       std::cout << "PYProblem created" << std::endl;
   }
 
- /* if (py::isinstance(data, IOptProblem_class)) {
-      /// Создание экземпляра класса задач, получаемых из Python
-      problem = new IOptProblem(data);
-      std::cout << "Python IOpt problem created" << std::endl;
-  }*/
-
   /// инициализация задачи
   problem->Initialize();
   std::cout << "Problem itialized" << std::endl;

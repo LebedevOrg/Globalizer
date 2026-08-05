@@ -124,7 +124,6 @@ void PYProblem::GetBounds(double* lower, double* upper) {
 /// Реализация метода, вычисляющего значение функции y из вектора функций с номером fNumber
 double PYProblem::CalculateFunctionals(const double* y, int fNumber) {
   py::gil_scoped_acquire gil;
-  std::cout << "GIL aquaried, CalculateFunctionals() started" << std::endl;
   if (fNumber >= functionsOfProblem.size())
     throw EXCEPTION("Error function number");
 
@@ -132,14 +131,14 @@ double PYProblem::CalculateFunctionals(const double* y, int fNumber) {
 
   /// Дополнительная проверка на корректность получения функций
   try {
-    std::cout << "fNumber: " << fNumber << std::endl;
+    /*std::cout << "fNumber: " << fNumber << std::endl;
     std::cout << "functionsOfProblem.size() = " << functionsOfProblem.size() << std::endl;
     std::cout << "Calculate in point: " << *y << std::endl;
-    auto start = std::chrono::steady_clock::now();
+    auto start = std::chrono::steady_clock::now();*/
     temp = functionsOfProblem[fNumber](y);
-    auto finish = std::chrono::steady_clock::now();
+    /*auto finish = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start);
-    std::cout << "Time took: " << elapsedTime.count() << std::endl;
+    std::cout << "Time took: " << elapsedTime.count() << std::endl;*/
   }
   catch (const py::error_already_set& e) {
     std::cerr << "PYTHON ERROR: " << e.what() << std::endl;
@@ -155,8 +154,8 @@ double PYProblem::CalculateFunctionals(const double* y, int fNumber) {
     throw;
   }
 
-  std::cout << "CalculateFunctionals() finished" << std::endl;
-  std::cout << "Result = " << temp << std::endl;
+  /*std::cout << "CalculateFunctionals() finished" << std::endl;
+  std::cout << "Result = " << temp << std::endl;*/
 
   return temp;
 }
