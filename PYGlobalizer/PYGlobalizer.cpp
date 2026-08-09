@@ -29,7 +29,6 @@
 
 #include "Globalizer.h"
 #include "PYProblem.h"
-#include "IOptProblem.h"
 
 namespace py = pybind11;
 
@@ -39,7 +38,7 @@ void solve(py::object& data, int maxParams = 50, double r = 5, bool localRefineS
   /// Инициализация Globalizer
   GlobalizerInitialization(0, nullptr, false, true);
 
-  //прорерка параметров: maxParams: 2 - 1000000, r > 1
+  //проверка параметров: maxParams: 2 - 1000000, r > 1
 
   parameters.MaxNumOfPoints = maxParams;
   parameters.r = r;
@@ -50,7 +49,6 @@ void solve(py::object& data, int maxParams = 50, double r = 5, bool localRefineS
   IProblem* problem;
 
   py::object PYProblem_class = py::module_::import("PYProblem").attr("PYProblem");
-  //py::object IOptProblem_class = py::module_::import("problem").attr("Problem");
 
   if (py::isinstance(data, PYProblem_class)) {
       /// Создание экземпляра класса задач, получаемых из Python

@@ -198,7 +198,6 @@ void Solver::MpiCalculation()
 // ------------------------------------------------------------------------------------------------
 void Solver::AsyncCalculation()
 {
-    std::cout << "Async started" << std::endl;
   int isFinish = 0;
   while (isFinish == 0)
   {
@@ -249,7 +248,6 @@ void Solver::AsyncCalculation()
       {
         //throw EXCEPTION("Infinite trail->FuncValues[fNumber]!");
         trail->index = -2;
-        std::cout << " CalculateFuncs Error!!!\n";
       }
       else
         if ((fNumber == (_pTask->GetNumOfFunc() - 1)) || (trail->FuncValues[fNumber] > 0))
