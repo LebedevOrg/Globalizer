@@ -13,6 +13,14 @@ sys.path.insert(0, str(root_dir))
 sys.path.insert(0, str(root_dir / "_bin"))
 sys.path.insert(0, str(root_dir / "examples"))
 
+# Добавляем путь к папке Problems из репозитория Globalizer_Benchmarks
+benchmarks_path = root_dir / "third_party" / "Problems" / "Problems"
+print(f"Path to problems: {benchmarks_path}")
+if benchmarks_path.exists():
+    sys.path.insert(0, str(benchmarks_path))
+
+print(f"Full sys path: {sys.path}")
+
 from trial import Point, FunctionValue
 from problem import Problem
 
@@ -24,7 +32,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 """
 
-from examples.Machine_learning.SVC._2D.Problems import SVC_2d
+from iOptProblem.MachineLearning.SupportVectorMachines.SVC_2d import SVC_2D
 from sklearn.datasets import load_breast_cancer
 from sklearn.utils import shuffle
 
@@ -46,7 +54,7 @@ def testSVC2D():
     regularization_value_bound = {'low': 1, 'up': 6}
     kernel_coefficient_bound = {'low': -7, 'up': -3}
 
-    p = SVC_2d.SVC_2D(x, y, regularization_value_bound, kernel_coefficient_bound)
+    p = SVC_2D(x, y, regularization_value_bound, kernel_coefficient_bound)
 
     problem = PYProblem()
     problem.copy_from_problem(p)

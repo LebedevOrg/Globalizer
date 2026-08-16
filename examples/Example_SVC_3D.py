@@ -13,6 +13,13 @@ sys.path.insert(0, str(root_dir))
 sys.path.insert(0, str(root_dir / "_bin"))
 sys.path.insert(0, str(root_dir / "examples"))
 
+# Добавляем путь к папке Problems из репозитория Globalizer_Benchmarks
+benchmarks_path = root_dir / "third_party" / "Problems" / "Problems"
+print(f"Path to problems: {benchmarks_path}")
+if benchmarks_path.exists():
+    sys.path.insert(0, str(benchmarks_path))
+
+print(f"Full sys path: {sys.path}")
 from trial import Point, FunctionValue
 from problem import Problem
 
@@ -33,7 +40,7 @@ from iOpt.solver import Solver
 from iOpt.solver_parametrs import SolverParameters
 """
 
-from examples.Machine_learning.SVC._3D.Problem import SVC_3D
+from iOptProblem.MachineLearning.SupportVectorMachines.SVC_3D import SVC_3D
 
 from PYProblem import PYProblem
 import PYGlobalizer
@@ -55,7 +62,7 @@ if __name__ == "__main__":
     regularization_value_bound = {'low': 1, 'up': 10}
     kernel_coefficient_bound = {'low': -9, 'up': -6.7}
     kernel_type = {'kernel': ['rbf', 'sigmoid', 'poly']}
-    p = SVC_3D.SVC_3D(x, y, regularization_value_bound, kernel_coefficient_bound, kernel_type)
+    p = SVC_3D(x, y, regularization_value_bound, kernel_coefficient_bound, kernel_type)
 
     problem = PYProblem(dimension=3)
     problem.copy_from_problem(p)
