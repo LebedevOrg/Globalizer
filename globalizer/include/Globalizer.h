@@ -57,7 +57,7 @@
   \param[in] errorsCount - Число ошибок
   последние три параметра инициализируются по умолчанию в методе SetDefaultErrors
   */
-void GlobalizerInitialization(int argc=0, char* argv[]=nullptr, 
+GLOBALIZER_API void GlobalizerInitialization(int argc=0, char* argv[]=nullptr,
   bool isMPIInit = false, bool isPrintParameters = false,
   std::string mLogFileName = "", int processCount = -1, 
   int processNumber = -1, bool isPrintToFile = false, 
