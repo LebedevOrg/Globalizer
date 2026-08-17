@@ -5,6 +5,7 @@ from math import cos, pi
 
 import numpy as np
 
+# Добавляем пути
 current_dir = Path(__file__).parent.absolute()
 root_dir = current_dir.parent
 pyglobalizer_path = root_dir / "PYGlobalizer"
@@ -13,13 +14,11 @@ sys.path.insert(0, str(root_dir))
 sys.path.insert(0, str(root_dir / "_bin"))
 sys.path.insert(0, str(root_dir / "examples"))
 
-# Добавляем путь к папке Problems из репозитория Globalizer_Benchmarks
+# Добавляем путь к задачам
 benchmarks_path = root_dir / "third_party" / "Problems" / "Problems"
-print(f"Path to problems: {benchmarks_path}")
 if benchmarks_path.exists():
     sys.path.insert(0, str(benchmarks_path))
 
-print(f"Full sys path: {sys.path}")
 from trial import Point, FunctionValue
 from problem import Problem
 
@@ -42,11 +41,12 @@ from iOpt.solver_parametrs import SolverParameters
 
 from iOptProblem.MachineLearning.SupportVectorMachines.SVC_3D import SVC_3D
 
+# Импортируем модуль интерфейса и модуль для задачи Globalizer
 from PYProblem import PYProblem
 import PYGlobalizer
 
 """
-Call problem here
+Создаём функции для загрузки датасета и создания задачи
 """
 
 
@@ -62,9 +62,12 @@ if __name__ == "__main__":
     regularization_value_bound = {'low': 1, 'up': 10}
     kernel_coefficient_bound = {'low': -9, 'up': -6.7}
     kernel_type = {'kernel': ['rbf', 'sigmoid', 'poly']}
+    # Создаём задачу
     p = SVC_3D(x, y, regularization_value_bound, kernel_coefficient_bound, kernel_type)
 
+    # Создаём задачу для Globalizer и копируем в неё созданную выше задачу
     problem = PYProblem(dimension=3)
     problem.copy_from_problem(p)
 
+    # Запуск решателя
     PYGlobalizer.solve(problem, 3, 5, False, 1)
