@@ -8,11 +8,15 @@ protected:
 
   /// Начало блока переменных
   int startParameterNumber;
+  /// Стартовый индекс переменных
+  int startIndex;
+  /// Флаг для задач со смешанными параметрами
+  bool isMixedInteger;
 
 
 public:
-  HDTask(IProblem* _problem, int _ProcLevel);
-  HDTask();
+  HDTask(IProblem* _problem, int _ProcLevel, bool _isMixedInteger = true);
+  HDTask(bool _isMixedInteger = true);
 
   /// Создает копию класса
   virtual Task* Clone();
@@ -40,17 +44,34 @@ public:
 
   /**
   * \brief Копирует координаты точки из массива, согласно имеющимся правилам
-  * \param[in] y имеющисся координаты.
+  * \param[in] y имеющиеся координаты.
   * \param[out] point точка назначения.
   * \return true, если значение допустимо, иначе false.
   */
   virtual void CopyPoint(double* y, Trial* point);
 
   /// <summary>
-  /// Копируем координаты точки
+  /// Копирует координаты точки
   /// </summary>
   /// <param name="resPoint"></param>
   /// <param name="y"></param>
   virtual void TransformPoint(double* resPoint, const double* y);
 
+  /// Возвращает число непрерывных параметров
+  virtual int GetNumberOfContinuousVariable();
+
+  /// Возвращает число дискретных параметров
+  virtual int GetNumberOfDiscreteVariable();
+
+  /// Задает задачу со смешанными переменными
+  void SetMixedInteger();
+
+  /// Задает задачу с непрерывными переменными
+  virtual void UnsetMixedInteger();
+
+  /// Задает стартовый индекс параметров задачи
+  virtual void SetStartIndex(int);
+
+  /// Задает стартовый индекс дискретных параметров задачи
+  virtual int GetStartDiscreteVariable();
 };

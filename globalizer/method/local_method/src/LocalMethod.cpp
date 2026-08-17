@@ -19,13 +19,13 @@
 #include <algorithm>
 #include "TrialFactory.h"
 
-LocalMethod::LocalMethod(Task* _pTask, Trial _startPoint, int logPoints) :
+LocalMethod::LocalMethod(Task* _pTask, Trial _StartPoint, int logPoints) :
   mCurrentPoint(NULL), mCurrentResearchDirection(NULL), mPreviousResearchDirection(NULL)
 {
   mEps = parameters.Epsilon / 100;
   if (mEps > 0.0001)
     mEps = 0.0001;
-  mBestPoint = _startPoint;
+  mBestPoint = _StartPoint;
   mStep = parameters.Epsilon * 2;
   mStepMultiplier = 2;
   mTrialsCounter = 0;
@@ -38,12 +38,12 @@ LocalMethod::LocalMethod(Task* _pTask, Trial _startPoint, int logPoints) :
 
   mStartPoint = new OBJECTIV_TYPE[mDimension];
   std::memcpy(mStartPoint,
-    _startPoint.y,
+    _StartPoint.y,
     mDimension * sizeof(OBJECTIV_TYPE));
 
   mFunctionsArgument = new OBJECTIV_TYPE[mPTask->GetN()];
   std::memcpy(mFunctionsArgument,
-    _startPoint.y,
+    _StartPoint.y,
     mPTask->GetN() * sizeof(OBJECTIV_TYPE));
   mMaxTrial = MAX_LOCAL_TRIALS_NUMBER;
 }
@@ -99,7 +99,8 @@ Trial LocalMethod::StartOptimization()
       {
         Trial currentTrial;
         currentTrial.index = mBestPoint.index;
-        currentTrial.FuncValues[currentTrial.index] = nextFValue;
+        if (currentTrial.index >= 0 && currentTrial.index < MaxNumOfFunc)
+          currentTrial.FuncValues[currentTrial.index] = nextFValue;
 
         std::memcpy(currentTrial.y, mCurrentPoint, sizeof(OBJECTIV_TYPE)*mDimension);
         mSearchSequence.push_back(currentTrial);
@@ -209,25 +210,25 @@ std::vector<Trial> LocalMethod::GetSearchSequence() const
 }
 
 // ------------------------------------------------------------------------------------------------
-double LocalMethod::MakeResearch(OBJECTIV_TYPE* startPoint)
+double LocalMethod::MakeResearch(OBJECTIV_TYPE* StartPoint)
 {
-  double bestValue = EvaluateObjectiveFunctiuon(startPoint);
+  double bestValue = EvaluateObjectiveFunctiuon(StartPoint);
 
 
   for (int i = 0; i < mDimension; i++)
   {
     //—двигаем стартовое значение на одно значение
-    startPoint[i] += mStep;
-    double rightFvalue = EvaluateObjectiveFunctiuon(startPoint);
+    StartPoint[i] += mStep;
+    double rightFvalue = EvaluateObjectiveFunctiuon(StartPoint);
 
 
     if (rightFvalue > bestValue)
     {
-      startPoint[i] -= 2 * mStep;
-      double leftFValue = EvaluateObjectiveFunctiuon(startPoint);
+      StartPoint[i] -= 2 * mStep;
+      double leftFValue = EvaluateObjectiveFunctiuon(StartPoint);
 
       if (leftFValue > bestValue)
-        startPoint[i] += mStep;
+        StartPoint[i] += mStep;
       else
         bestValue = leftFValue;
     }

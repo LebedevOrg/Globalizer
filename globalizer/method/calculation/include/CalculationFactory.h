@@ -27,7 +27,7 @@
 #define __CALCULATION_FACTORY_H__
 
 #include "Calculation.h"
-#include "Evolvent.h"
+#include "EvolventInterface.h"
 
  /**
   * \brief Класс-фабрика для создания объектов-вычислителей.
@@ -47,7 +47,7 @@ public:
      * \param evolvent Указатель на эвольвенту (опционально).
      * \return Указатель на объект #Calculation.
      */
-    static Calculation* CreateCalculation(Task& _pTask, Evolvent* evolvent = 0);
+    static Calculation* CreateCalculation(Task& _pTask, IEvolvent* evolvent = 0);
     /**
      * \brief Создает или возвращает существующий вычислитель (альтернативная логика).
      *
@@ -55,7 +55,7 @@ public:
      * \param evolvent Указатель на эвольвенту (опционально).
      * \return Указатель на объект #Calculation.
      */
-    static Calculation* CreateCalculation2(Task& _pTask, Evolvent* evolvent = 0);
+    static Calculation* CreateCalculation2(Task& _pTask, IEvolvent* evolvent = 0);
 
     /**
      * \brief Всегда создает новый экземпляр вычислителя.
@@ -65,7 +65,7 @@ public:
      * \param evolvent Указатель на эвольвенту (опционально).
      * \return Указатель на новый объект #Calculation.
      */
-    static Calculation* CreateNewCalculation(Task& _pTask, Evolvent* evolvent = 0);
+    static Calculation* CreateNewCalculation(Task& _pTask, IEvolvent* evolvent = 0);
 
 };
 

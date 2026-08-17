@@ -170,8 +170,14 @@ int Task::GetNumOfFuncAtProblem() const
 // ------------------------------------------------------------------------------------------------
 double Task::CalculateFuncs(const double* y, int fNumber)
 {
-  double multInLevel = parameters.functionSignMultiplier[GetProcLevel()];
-  double result = multInLevel * pProblem->CalculateFunctionals(y, fNumber);
+  double multInLevel = parameters.FunctionSignMultiplier[GetProcLevel()];
+  double result;
+  try {
+    result = multInLevel * pProblem->CalculateFunctionals(y, fNumber);
+  }
+  catch (...) {
+    result = MaxDouble;
+  }
   return result;
 }
 
@@ -183,6 +189,12 @@ void Task::CalculateFuncsInManyPoints(double* y, int fNumber, int numPoints, dou
   {
 	newProblem->CalculateFunctionals(y, fNumber, numPoints, values);  
   }
+}
+
+// ------------------------------------------------------------------------------------------------
+int Task::GetNumberOfContinuousVariable()
+{
+	return GetN() - GetNumberOfDiscreteVariable();
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -267,4 +279,10 @@ void Task::TransformPoint(double* resPoint, const double* y)
   for (int i =0; i < parameters.Dimension; i++)
     resPoint[i] = y[i];
 }
+
+// ------------------------------------------------------------------------------------------------
+int Task::GetStartDiscreteVariable() {
+    return GetN() - GetNumberOfDiscreteVariable();
+}
+
 // - end of file ----------------------------------------------------------------------------------

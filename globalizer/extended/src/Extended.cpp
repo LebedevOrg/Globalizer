@@ -600,7 +600,7 @@ Extended Extended::operator/(const double& e) const
 }
 
 //------------------------------------------
-// friend operations (+,-,*,/,floor,pow,root)
+// friend operations (+,-,*,/,ceil,floor,pow,root)
 //------------------------------------------
 
 Extended operator+(const double& e1, const Extended& e2)
@@ -653,8 +653,23 @@ Extended fabs(const Extended& e)
   return res;
 }
 
+Extended ceil(const Extended& x, const Extended& extZero)
+{
+    Extended floor_val = floor(x);
+    Extended frac = x - floor_val;
+    if (frac == extZero)
+    {
+        return floor_val;
+    }
+    else
+    {
+        return floor_val + Extended(1);
+    }
+}
+
 double floor(const Extended& e)
 {
+    double e_tmp = e.toDouble();
   double res = 0.0;
   switch (Extended::type)
   {

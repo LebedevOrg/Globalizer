@@ -54,7 +54,7 @@ void FindXY(int& x, int& y, int z, int C)
 
     for (int curX = minX; curX <= targetX + 5; ++curX)
     {
-      if (curX <= curY) continue;
+      if (curX <= 5 * curY) continue;
 
       long long product = static_cast<long long>(curX) * curY * C;
       long long diff = std::abs(product - z);

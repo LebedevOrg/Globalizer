@@ -1,4 +1,4 @@
-
+п»ї
 /////////////////////////////////////////////////////////////////////////////
 //                                                                         //
 //             LOBACHEVSKY STATE UNIVERSITY OF NIZHNY NOVGOROD             //
@@ -42,7 +42,7 @@
 
 // ------------------------------------------------------------------------------------------------
 MixedIntegerMethod::MixedIntegerMethod(Task& _pTask, SearchData& _pData,
-  Calculation& _Calculation, Evolvent& _Evolvent) : Method(_pTask, _pData, _Calculation, _Evolvent)
+  Calculation& _Calculation, IEvolvent& _Evolvent) : Method(_pTask, _pData, _Calculation, _Evolvent)
 {
   
 }
@@ -71,10 +71,10 @@ SearchData* MixedIntegerMethod::GetSearchData(Trial* trial)
 }
 
 // ------------------------------------------------------------------------------------------------
-/// Вычисляет координаты на отрезке 0..1 для всех разверток по образу проведенного испытания
+/// Р’С‹С‡РёСЃР»СЏРµС‚ РєРѕРѕСЂРґРёРЅР°С‚С‹ РЅР° РѕС‚СЂРµР·РєРµ 0..1 РґР»СЏ РІСЃРµС… СЂР°Р·РІРµСЂС‚РѕРє РїРѕ РѕР±СЂР°Р·Сѓ РїСЂРѕРІРµРґРµРЅРЅРѕРіРѕ РёСЃРїС‹С‚Р°РЅРёСЏ
 void MixedIntegerMethod::CalculateCurrentPoint(Trial& pCurTrialsj, SearchInterval* BestIntervalsj)
 {
-  // Вычисляем x
+  // Р’С‹С‡РёСЃР»СЏРµРј x
   pCurTrialsj.discreteValuesIndex = BestIntervalsj->discreteValuesIndex();
   if (BestIntervalsj->izl() != BestIntervalsj->izr())
   {
@@ -86,7 +86,7 @@ void MixedIntegerMethod::CalculateCurrentPoint(Trial& pCurTrialsj, SearchInterva
     pCurTrialsj.SetX(0.5 * (BestIntervalsj->xl() + BestIntervalsj->xr()) -
       (((BestIntervalsj->zr() - BestIntervalsj->zl()) > 0) ? 1 : -1) *
       pow(fabs(BestIntervalsj->zr() - BestIntervalsj->zl()) /
-        pData->M[BestIntervalsj->izl()], parameters.Dimension) / 2 / parameters.r);
+        pData->M[BestIntervalsj->izl()], pTask.GetNumberOfContinuousVariable()) / 2 / parameters.r);
     //      pCurTrialsj.x = BestIntervalsj->xl() + (0.5*BestIntervalsj->dx -
     //(((BestIntervalsj->zr() - BestIntervalsj->zl)>0)?1:-1)*pow(fabs(BestIntervalsj->zr() -
     //BestIntervalsj->zl)/pData->M[BestIntervalsj->izl],parameters.Dimension)/(2*r));
@@ -95,18 +95,18 @@ void MixedIntegerMethod::CalculateCurrentPoint(Trial& pCurTrialsj, SearchInterva
   pCurTrialsj.leftInterval = BestIntervalsj;
   pCurTrialsj.rightInterval = BestIntervalsj;
 
-  //Точка новой итерации должна быть в интервале, иначе - ошибка!!!
+  //РўРѕС‡РєР° РЅРѕРІРѕР№ РёС‚РµСЂР°С†РёРё РґРѕР»Р¶РЅР° Р±С‹С‚СЊ РІ РёРЅС‚РµСЂРІР°Р»Рµ, РёРЅР°С‡Рµ - РѕС€РёР±РєР°!!!
   if (pCurTrialsj.X() <= BestIntervalsj->xl() || pCurTrialsj.X() >= BestIntervalsj->xr())
   {
     //throw EXCEPTION("Point is outside the interval !");
     pCurTrialsj.SetX(0.5 * (BestIntervalsj->xl() + BestIntervalsj->xr()));
   }
 
-  // Вычисляем y
-  // Вычисляем образ точки итерации - образ записывается в начальные позиции массива y
+  // Р’С‹С‡РёСЃР»СЏРµРј y
+  // Р’С‹С‡РёСЃР»СЏРµРј РѕР±СЂР°Р· С‚РѕС‡РєРё РёС‚РµСЂР°С†РёРё - РѕР±СЂР°Р· Р·Р°РїРёСЃС‹РІР°РµС‚СЃСЏ РІ РЅР°С‡Р°Р»СЊРЅС‹Рµ РїРѕР·РёС†РёРё РјР°СЃСЃРёРІР° y
   CalculateImage(pCurTrialsj);
 
-  // Записываем значение дискретной переменной
+  // Р—Р°РїРёСЃС‹РІР°РµРј Р·РЅР°С‡РµРЅРёРµ РґРёСЃРєСЂРµС‚РЅРѕР№ РїРµСЂРµРјРµРЅРЅРѕР№
   for (int j = 0; j < pTask.GetNumberOfDiscreteVariable(); j++)
     pCurTrialsj.y[startDiscreteVariable + j] =
     mDiscreteValues[pCurTrialsj.discreteValuesIndex][j];
@@ -115,26 +115,26 @@ void MixedIntegerMethod::CalculateCurrentPoint(Trial& pCurTrialsj, SearchInterva
 // ------------------------------------------------------------------------------------------------
 void MixedIntegerMethod::FirstIteration()
 {
-  // Задаем границы интервалов изменения параметров
-  // Указатель на границы интервалов в подзадаче - это указатель на исходные границы,
-  //   смещенный на число фиксированных размерностей
+  // Р—Р°РґР°РµРј РіСЂР°РЅРёС†С‹ РёРЅС‚РµСЂРІР°Р»РѕРІ РёР·РјРµРЅРµРЅРёСЏ РїР°СЂР°РјРµС‚СЂРѕРІ
+  // РЈРєР°Р·Р°С‚РµР»СЊ РЅР° РіСЂР°РЅРёС†С‹ РёРЅС‚РµСЂРІР°Р»РѕРІ РІ РїРѕРґР·Р°РґР°С‡Рµ - СЌС‚Рѕ СѓРєР°Р·Р°С‚РµР»СЊ РЅР° РёСЃС…РѕРґРЅС‹Рµ РіСЂР°РЅРёС†С‹,
+  //   СЃРјРµС‰РµРЅРЅС‹Р№ РЅР° С‡РёСЃР»Рѕ С„РёРєСЃРёСЂРѕРІР°РЅРЅС‹С… СЂР°Р·РјРµСЂРЅРѕСЃС‚РµР№
   evolvent.SetBounds(pTask.GetA(), pTask.GetB());
 
-  // Это первая итерация, сбрасываем счетчик
+  // Р­С‚Рѕ РїРµСЂРІР°СЏ РёС‚РµСЂР°С†РёСЏ, СЃР±СЂР°СЃС‹РІР°РµРј СЃС‡РµС‚С‡РёРє
   iteration.IterationCount = 1;
-  // И сбрасываем достигнутую точность
+  // Р СЃР±СЂР°СЃС‹РІР°РµРј РґРѕСЃС‚РёРіРЅСѓС‚СѓСЋ С‚РѕС‡РЅРѕСЃС‚СЊ
   AchievedAccuracy = 1.0;
-  // И лучшую итерацию
+  // Р Р»СѓС‡С€СѓСЋ РёС‚РµСЂР°С†РёСЋ
   //pData->GetBestTrial()->index = -2;
-  // Формируем интервал [0,1]
+  // Р¤РѕСЂРјРёСЂСѓРµРј РёРЅС‚РµСЂРІР°Р» [0,1]
 
-    // Вычисляем чилсло значений дискретных параметров
+    // Р’С‹С‡РёСЃР»СЏРµРј С‡РёР»СЃР»Рѕ Р·РЅР°С‡РµРЅРёР№ РґРёСЃРєСЂРµС‚РЅС‹С… РїР°СЂР°РјРµС‚СЂРѕРІ
   mDiscreteValuesCount = 1;
   int numberOfDiscreteVariable = pTask.GetNumberOfDiscreteVariable();
 
 
   std::vector< std::vector<double> > dvs(numberOfDiscreteVariable);
-  startDiscreteVariable = pTask.GetN() - numberOfDiscreteVariable;
+  startDiscreteVariable = pTask.GetStartDiscreteVariable();
   for (int e = 0; e < numberOfDiscreteVariable; e++)
   {
     dvs[e].resize(pTask.GetNumberOfValues(startDiscreteVariable + e));
@@ -170,15 +170,15 @@ void MixedIntegerMethod::FirstIteration()
     NewInterval[e]->CreatePoint();
     NewInterval[e]->LeftPoint->discreteValuesIndex = e;
     NewInterval[e]->RightPoint->discreteValuesIndex = e;
-    // Гельдеровская длина
+    // Р“РµР»СЊРґРµСЂРѕРІСЃРєР°СЏ РґР»РёРЅР°
     NewInterval[e]->delta = 1.0;
-    //Добавляем интервал
+    //Р”РѕР±Р°РІР»СЏРµРј РёРЅС‚РµСЂРІР°Р»
     SearchInterval* p = pData->InsertInterval(*(NewInterval[e]));
     delete NewInterval[e];
     NewInterval[e] = p;
     pData->GetTrials().push_back(p->LeftPoint);
     pData->GetTrials().push_back(p->RightPoint);
-    ///Необходимо сосчитать значения на границах
+    ///РќРµРѕР±С…РѕРґРёРјРѕ СЃРѕСЃС‡РёС‚Р°С‚СЊ Р·РЅР°С‡РµРЅРёСЏ РЅР° РіСЂР°РЅРёС†Р°С…
     CalculateImage(*p->LeftPoint);
 
     for (int j = 0; j < numberOfDiscreteVariable; j++)
@@ -195,11 +195,11 @@ void MixedIntegerMethod::FirstIteration()
       pData->SetBestTrial(p->LeftPoint);
 
     //====================================================================
-    if ((parameters.isCalculationInBorderPoint == true) || (parameters.LocalTuningType != 0))
+    if ((parameters.IsCalculationInBorderPoint == true) || (parameters.LocalTuningType != 0))
     {
       //if (parameters.Dimension == 1)
       {
-        // Эта функция вызывается только в листе дерева - поэтому вычисляем функционалы здесь
+        // Р­С‚Р° С„СѓРЅРєС†РёСЏ РІС‹Р·С‹РІР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РІ Р»РёСЃС‚Рµ РґРµСЂРµРІР° - РїРѕСЌС‚РѕРјСѓ РІС‹С‡РёСЃР»СЏРµРј С„СѓРЅРєС†РёРѕРЅР°Р»С‹ Р·РґРµСЃСЊ
         for (int j = 0; j < pTask.GetNumOfFunc(); j++)
         {
           p->LeftPoint->FuncValues[j] = MaxDouble;
@@ -234,18 +234,18 @@ void MixedIntegerMethod::FirstIteration()
   }
   //====================================================================
 
-  // На первой итерации - единственный лучший интервал
+  // РќР° РїРµСЂРІРѕР№ РёС‚РµСЂР°С†РёРё - РµРґРёРЅСЃС‚РІРµРЅРЅС‹Р№ Р»СѓС‡С€РёР№ РёРЅС‚РµСЂРІР°Р»
   //for (i = 0; i < NumPoints; i++)
   //  iteration.BestIntervals[i] = p;
 
-  // Флаг пересчета - поднят
+  // Р¤Р»Р°Рі РїРµСЂРµСЃС‡РµС‚Р° - РїРѕРґРЅСЏС‚
   pData->SetRecalc(true);
 
-  // Точки первой итерации выбираются по особому правилу
-  // Равномерно ставим NumPoints точек c шагом h
-  // А надо бы случайно...
+  // РўРѕС‡РєРё РїРµСЂРІРѕР№ РёС‚РµСЂР°С†РёРё РІС‹Р±РёСЂР°СЋС‚СЃСЏ РїРѕ РѕСЃРѕР±РѕРјСѓ РїСЂР°РІРёР»Сѓ
+  // Р Р°РІРЅРѕРјРµСЂРЅРѕ СЃС‚Р°РІРёРј NumPoints С‚РѕС‡РµРє c С€Р°РіРѕРј h
+  // Рђ РЅР°РґРѕ Р±С‹ СЃР»СѓС‡Р°Р№РЅРѕ...
   double h = 1.0 / (parameters.NumPoints + 1);
-  if (!parameters.isLoadFirstPointFromFile) // равномерно распределяем начальные точки
+  if (!parameters.IsLoadFirstPointFromFile) // СЂР°РІРЅРѕРјРµСЂРЅРѕ СЂР°СЃРїСЂРµРґРµР»СЏРµРј РЅР°С‡Р°Р»СЊРЅС‹Рµ С‚РѕС‡РєРё
   {
     for (int e = 0; e < mDiscreteValuesCount; e++)
     {
@@ -260,7 +260,7 @@ void MixedIntegerMethod::FirstIteration()
           pData->GetTrials().push_back(iteration.pCurTrials[ind]);
           iteration.pCurTrials[ind]->SetX((q + 1) * h);
 
-          // Вычисляем образ точки итерации - образ записывается в начальные позиции массива y
+          // Р’С‹С‡РёСЃР»СЏРµРј РѕР±СЂР°Р· С‚РѕС‡РєРё РёС‚РµСЂР°С†РёРё - РѕР±СЂР°Р· Р·Р°РїРёСЃС‹РІР°РµС‚СЃСЏ РІ РЅР°С‡Р°Р»СЊРЅС‹Рµ РїРѕР·РёС†РёРё РјР°СЃСЃРёРІР° y
           CalculateImage(*iteration.pCurTrials[ind]);
 
           for (int j = 0; j < numberOfDiscreteVariable; j++)
@@ -277,7 +277,7 @@ void MixedIntegerMethod::FirstIteration()
           iteration.pCurTrials[ind]->discreteValuesIndex = e;
           pData->GetTrials().push_back(iteration.pCurTrials[ind]);
 
-          for (size_t iCNP = 0; iCNP < parameters.Dimension; iCNP++)
+          for (size_t iCNP = 0; iCNP < pTask.GetNumberOfContinuousVariable(); iCNP++)
           {
             iteration.pCurTrials[ind]->y[iCNP] = pTask.GetA()[iCNP] + ((double(q) + 1.0) * h) * (pTask.GetB()[iCNP] - pTask.GetA()[iCNP]);
           }
@@ -297,7 +297,7 @@ void MixedIntegerMethod::FirstIteration()
     }
     
   }
-  else // читаем из файла FirstPointFilePath
+  else // С‡РёС‚Р°РµРј РёР· С„Р°Р№Р»Р° FirstPointFilePath
   {
     std::string pointsPath = parameters.FirstPointFilePath;
 
@@ -319,7 +319,8 @@ void MixedIntegerMethod::FirstIteration()
       typeColor.reserve(numberOfPoints + 2);
 
 
-      while (!input.eof()) {
+      while (!input.eof()) 
+      {
         size_t nextPosition = 0;
         std::vector<double> currentPoint(parameters.Dimension);
         double curVal;
@@ -417,18 +418,18 @@ void MixedIntegerMethod::CalculateIterationPoints()
     this->SetNumPoints(parameters.NumPoints);
   }
 
-  // Если поднят флаг - то пересчитать все характеристики
+  // Р•СЃР»Рё РїРѕРґРЅСЏС‚ С„Р»Р°Рі - С‚Рѕ РїРµСЂРµСЃС‡РёС‚Р°С‚СЊ РІСЃРµ С…Р°СЂР°РєС‚РµСЂРёСЃС‚РёРєРё
   Recalc();
 
-  // Здесь надо взять NumPoints лучших характеристик из очереди
-  // Очередь пока одна - очередь глобальных характеристик
-  // В ней должно быть нужное количество интервалов, т.к. на первом шаге проводится NumPoints
-  // испытаний
+  // Р—РґРµСЃСЊ РЅР°РґРѕ РІР·СЏС‚СЊ NumPoints Р»СѓС‡С€РёС… С…Р°СЂР°РєС‚РµСЂРёСЃС‚РёРє РёР· РѕС‡РµСЂРµРґРё
+  // РћС‡РµСЂРµРґСЊ РїРѕРєР° РѕРґРЅР° - РѕС‡РµСЂРµРґСЊ РіР»РѕР±Р°Р»СЊРЅС‹С… С…Р°СЂР°РєС‚РµСЂРёСЃС‚РёРє
+  // Р’ РЅРµР№ РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ РЅСѓР¶РЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РёРЅС‚РµСЂРІР°Р»РѕРІ, С‚.Рє. РЅР° РїРµСЂРІРѕРј С€Р°РіРµ РїСЂРѕРІРѕРґРёС‚СЃСЏ NumPoints
+  // РёСЃРїС‹С‚Р°РЅРёР№
   std::vector<SearchInterval*> BestIntervals(parameters.NumPoints);
 
-  int localMix = parameters.localMix;
+  int LocalMix = parameters.LocalMix;
 
-  if (GetIterationType(iteration.IterationCount, localMix) == Global)
+  if (GetIterationType(iteration.IterationCount, LocalMix) == Global)
   {
 
     pData->GetBestIntervals(BestIntervals.data(), parameters.NumPoints);
@@ -436,7 +437,7 @@ void MixedIntegerMethod::CalculateIterationPoints()
   }
   else
     pData->GetBestLocalIntervals(BestIntervals.data(), parameters.NumPoints);
-  // Пока заполняем одновременно вектор CurTrials, и вектор интервалов
+  // РџРѕРєР° Р·Р°РїРѕР»РЅСЏРµРј РѕРґРЅРѕРІСЂРµРјРµРЅРЅРѕ РІРµРєС‚РѕСЂ CurTrials, Рё РІРµРєС‚РѕСЂ РёРЅС‚РµСЂРІР°Р»РѕРІ
 
   CalculateCurrentPoints(BestIntervals);
 }

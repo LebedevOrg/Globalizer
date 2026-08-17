@@ -888,3 +888,619 @@ TEST(Properties_TEMapType, can_create_default_EMapType)
 {
   ASSERT_NO_THROW(TEMapType<PropertiesTest> a);
 }
+
+///  метод GetData для TFlag возвращает корректное значение
+TEST(Properties_TFlag, is_Flag_GetData_working)
+{
+  TFlag<PropertiesTest> b(true);
+  ASSERT_EQ(true, b.GetData());
+}
+
+///  метод Clone для TFlag сохраняет флаговость
+TEST(Properties_TFlag, is_Flag_Clone_working)
+{
+  TFlag<PropertiesTest> b(true);
+  TFlag<PropertiesTest>* c;
+  b.Clone((BaseProperty<PropertiesTest>**) & c);
+  ASSERT_EQ(true, c->GetData());
+  ASSERT_EQ(true, c->IsFlag());   // важно: клон тоже флаг
+}
+
+///  метод Copy для TFlag работает корректно
+TEST(Properties_TFlag, is_Flag_Copy_working)
+{
+  TFlag<PropertiesTest> b(false);
+  TFlag<PropertiesTest> c(true);
+  b.Copy((void*)&c);
+  ASSERT_EQ(true, b.GetData());
+}
+
+///  метод ToString для TFlag работает корректно
+TEST(Properties_TFlag, is_Flag_ToString_working)
+{
+  TFlag<PropertiesTest> b(false);
+  ASSERT_EQ("false", b.ToString());
+}
+
+///  метод FromString для TFlag работает корректно
+TEST(Properties_TFlag, is_Flag_FromString_working)
+{
+  TFlag<PropertiesTest> b(false);
+  b.FromString("true");
+  ASSERT_EQ(true, (bool)b);
+}
+
+///  парсинг "1" даёт true
+TEST(Properties_TBool, is_Bool_FromString_numeric_true)
+{
+  TBool<PropertiesTest> b(false);
+  b = std::string("1");
+  ASSERT_EQ(true, (bool)b);
+}
+
+///  парсинг "0" даёт false
+TEST(Properties_TBool, is_Bool_FromString_numeric_false)
+{
+  TBool<PropertiesTest> b(true);
+  b = std::string("0");
+  ASSERT_EQ(false, (bool)b);
+}
+
+///  невалидная строка НЕ меняет значение (документируем поведение)
+TEST(Properties_TBool, is_Bool_FromString_invalid_keeps_value)
+{
+  TBool<PropertiesTest> b(true);
+  b = std::string("qwerty");
+  ASSERT_EQ(true, (bool)b);   // значение осталось прежним
+
+  TBool<PropertiesTest> c(false);
+  c = std::string("");
+  ASSERT_EQ(false, (bool)c);
+}
+
+///  отрицательное значение TInt
+TEST(Properties_TInt, is_Int_negative_value)
+{
+  TInt<PropertiesTest> b(-123);
+  ASSERT_EQ(-123, (int)b);
+  ASSERT_EQ("-123", (string)b);
+}
+
+///  граничные значения int (min/max)
+TEST(Properties_TInt, is_Int_limits)
+{
+  TInt<PropertiesTest> bmax(2147483647);
+  ASSERT_EQ(2147483647, (int)bmax);
+
+  TInt<PropertiesTest> bmin(-2147483647 - 1);
+  ASSERT_EQ((-2147483647 - 1), (int)bmin);
+}
+
+///  round-trip: value -> string -> value
+TEST(Properties_TInt, is_Int_roundtrip)
+{
+  TInt<PropertiesTest> a(98765);
+  string s = (string)a;
+  TInt<PropertiesTest> b(0);
+  b = s;
+  ASSERT_EQ((int)a, (int)b);
+}
+
+///  парсинг строки с мусором в хвосте берёт число из начала
+TEST(Properties_TInt, is_Int_FromString_trailing_garbage)
+{
+  TInt<PropertiesTest> b(0);
+  b = std::string("42abc");
+  ASSERT_EQ(42, (int)b);
+}
+
+///  метод Clone / Copy / GetData для TInt
+TEST(Properties_TInt, is_Int_Clone_and_Copy_working)
+{
+  TInt<PropertiesTest> b(7);
+  TInt<PropertiesTest>* c;
+  b.Clone((BaseProperty<PropertiesTest>**) & c);
+  ASSERT_EQ(7, c->GetData());
+
+  TInt<PropertiesTest> d(0);
+  d.Copy((void*)&b);
+  ASSERT_EQ(7, d.GetData());
+}
+
+///  ToString/FromString методы (не только операторы) для TInt
+TEST(Properties_TInt, is_Int_ToString_FromString_methods)
+{
+  TInt<PropertiesTest> b(55);
+  ASSERT_EQ("55", b.ToString());
+  b.FromString("777");
+  ASSERT_EQ(777, (int)b);
+}
+
+///  сравнение double через ASSERT_DOUBLE_EQ
+TEST(Properties_TDouble, is_Double_value_precise)
+{
+  TDouble<PropertiesTest> b(3.14159265);
+  ASSERT_DOUBLE_EQ(3.14159265, (double)b);
+}
+
+///  отрицательное и нулевое значение
+TEST(Properties_TDouble, is_Double_negative_and_zero)
+{
+  TDouble<PropertiesTest> b(-2.5);
+  ASSERT_DOUBLE_EQ(-2.5, (double)b);
+
+  TDouble<PropertiesTest> z(0.0);
+  ASSERT_EQ("0.000000", (string)z);   // формат %lf
+}
+
+///  ToString использует формат %lf (6 знаков после точки)
+TEST(Properties_TDouble, is_Double_ToString_format)
+{
+  TDouble<PropertiesTest> b(1.5);
+  ASSERT_EQ("1.500000", (string)b);   // фиксируем поведение sprintf %lf
+}
+
+///  парсинг научной нотации
+TEST(Properties_TDouble, is_Double_FromString_scientific)
+{
+  TDouble<PropertiesTest> b(0);
+  b = std::string("1.5e3");
+  ASSERT_DOUBLE_EQ(1500.0, (double)b);
+}
+
+///  round-trip double (с учётом потери точности до 6 знаков)
+TEST(Properties_TDouble, is_Double_roundtrip)
+{
+  TDouble<PropertiesTest> a(12.345678);
+  string s = (string)a;
+  TDouble<PropertiesTest> b(0);
+  b = s;
+  ASSERT_NEAR((double)a, (double)b, 1e-6);
+}
+
+///  Clone / Copy для TDouble
+TEST(Properties_TDouble, is_Double_Clone_and_Copy_working)
+{
+  TDouble<PropertiesTest> b(9.81);
+  TDouble<PropertiesTest>* c;
+  b.Clone((BaseProperty<PropertiesTest>**) & c);
+  ASSERT_DOUBLE_EQ(9.81, c->GetData());
+}
+
+///  оператор преобразования TString в строку
+TEST(Properties_TString, is_String_operator_ToString_working)
+{
+  string val = "hello";
+  TString<PropertiesTest> b(val);
+  ASSERT_EQ(val, (string)b);
+}
+
+///  пустая строка
+TEST(Properties_TString, is_String_empty_value)
+{
+  TString<PropertiesTest> b;
+  ASSERT_EQ("", (string)b);
+}
+
+///  строка с разделителем и пробелами хранится как есть
+TEST(Properties_TString, is_String_with_special_chars)
+{
+  string val = "a_b c";
+  TString<PropertiesTest> b(val);
+  ASSERT_EQ(val, b.GetData());
+}
+
+///  Clone / Copy для TString
+TEST(Properties_TString, is_String_Clone_and_Copy_working)
+{
+  TString<PropertiesTest> b("abc");
+  TString<PropertiesTest>* c;
+  b.Clone((BaseProperty<PropertiesTest>**) & c);
+  ASSERT_EQ("abc", c->GetData());
+
+  TString<PropertiesTest> d;
+  d.Copy((void*)&b);
+  ASSERT_EQ("abc", d.GetData());
+}
+
+///  Name / Help / Link для TString (общий интерфейс)
+TEST(Properties_TString, is_String_name_help_link_working)
+{
+  TString<PropertiesTest> b("x");
+  b.SetName("s");
+  b.SetHelp("help");
+  b.SetLink("-s");
+  ASSERT_EQ("s", b.GetName());
+  ASSERT_EQ("help", b.GetHelp());
+  ASSERT_EQ("-s", b.GetLink());
+}
+
+
+///  SetSize с нулём/отрицательным значением не меняет массив
+TEST(Properties_TInts, is_Ints_SetSize_zero_ignored)
+{
+  int val[3] = { 1, 2, 3 };
+  TInts<PropertiesTest> b(val, 3);
+  b.SetSize(0);
+  ASSERT_EQ(3, b.GetSize());   // размер не изменился
+  b.SetSize(-5);
+  ASSERT_EQ(3, b.GetSize());
+}
+
+///  SetSize с увеличением заполняет новые элементы нулями и сохраняет старые
+TEST(Properties_TInts, is_Ints_SetSize_grow_preserves_data)
+{
+  int val[2] = { 10, 20 };
+  TInts<PropertiesTest> b(val, 2);
+  b.SetSize(4);
+  ASSERT_EQ(4, b.GetSize());
+  ASSERT_EQ(10, b.GetData()[0]);
+  ASSERT_EQ(20, b.GetData()[1]);
+  ASSERT_EQ(0, b.GetData()[2]);
+  ASSERT_EQ(0, b.GetData()[3]);
+}
+
+///  SetSize с уменьшением усекает массив
+TEST(Properties_TInts, is_Ints_SetSize_shrink)
+{
+  int val[4] = { 1, 2, 3, 4 };
+  TInts<PropertiesTest> b(val, 4);
+  b.SetSize(2);
+  ASSERT_EQ(2, b.GetSize());
+  ASSERT_EQ(1, b.GetData()[0]);
+  ASSERT_EQ(2, b.GetData()[1]);
+}
+
+///  оператор индексации TInts работает
+TEST(Properties_TInts, is_Ints_operator_index_working)
+{
+  int val[3] = { 7, 8, 9 };
+  TInts<PropertiesTest> b(val, 3);
+  ASSERT_EQ(7, b[0]);
+  ASSERT_EQ(9, b[2]);
+}
+
+///  индексация за границей создаёт элемент (документируем поведение Indexer)
+TEST(Properties_TInts, is_Ints_operator_index_out_of_range)
+{
+  TInts<PropertiesTest> b;   // пустой, mValue == 0
+  ASSERT_NO_THROW(b[100]);   // Indexer вызовет SetSize(1) и вернёт [0]
+  ASSERT_EQ(1, b.GetSize());
+}
+
+///  парсинг одиночного элемента без разделителя
+TEST(Properties_TInts, is_Ints_FromString_single_element)
+{
+  string val = "42";
+  TInts<PropertiesTest> b;
+  b = val;
+  ASSERT_EQ(1, b.GetSize());
+  ASSERT_EQ(42, b.GetData()[0]);
+}
+
+///  ToString пустого массива
+TEST(Properties_TInts, is_Ints_ToString_empty)
+{
+  TInts<PropertiesTest> b;
+  ASSERT_EQ("", (string)b);
+}
+
+///  round-trip: value -> string -> value для TInts
+TEST(Properties_TInts, is_Ints_roundtrip)
+{
+  int val[3] = { 5, 6, 7 };
+  TInts<PropertiesTest> a(val, 3);
+  string s = (string)a;              // "5_6_7"
+  TInts<PropertiesTest> b;
+  b = s;
+  ASSERT_EQ(3, b.GetSize());
+  for (int i = 0; i < 3; i++)
+    ASSERT_EQ(val[i], b.GetData()[i]);
+}
+
+///  SetSize grow для TStrings заполняет пустыми строками
+TEST(Properties_TStrings, is_Strings_SetSize_grow_fills_empty)
+{
+  string val[1] = { "a" };
+  TStrings<PropertiesTest> b(val, 1);
+  b.SetSize(3);
+  ASSERT_EQ(3, b.GetSize());
+  ASSERT_EQ("a", b.GetData()[0]);
+  ASSERT_EQ("", b.GetData()[1]);
+  ASSERT_EQ("", b.GetData()[2]);
+}
+
+///  round-trip для TStrings
+TEST(Properties_TStrings, is_Strings_roundtrip)
+{
+  string val[3] = { "x", "y", "z" };
+  TStrings<PropertiesTest> a(val, 3);
+  string s = (string)a;              // "x_y_z"
+  TStrings<PropertiesTest> b;
+  b = s;
+  ASSERT_EQ(3, b.GetSize());
+  for (int i = 0; i < 3; i++)
+    ASSERT_EQ(val[i], b.GetData()[i]);
+}
+
+///  оператор индексации TStrings
+TEST(Properties_TStrings, is_Strings_operator_index_working)
+{
+  string val[2] = { "hi", "bye" };
+  TStrings<PropertiesTest> b(val, 2);
+  ASSERT_EQ("hi", b[0]);
+  ASSERT_EQ("bye", b[1]);
+}
+
+///  ToString для TDoubles одного элемента
+TEST(Properties_TDoubles, is_Doubles_ToString_single)
+{
+  double val[1] = { 2.5 };
+  TDoubles<PropertiesTest> b(val, 1);
+  ASSERT_EQ("2.500000", (string)b);
+}
+
+///  round-trip для TDoubles
+TEST(Properties_TDoubles, is_Doubles_roundtrip)
+{
+  double val[3] = { 1.1, 2.2, 3.3 };
+  TDoubles<PropertiesTest> a(val, 3);
+  string s = (string)a;
+  TDoubles<PropertiesTest> b;
+  b = s;
+  ASSERT_EQ(3, b.GetSize());
+  for (int i = 0; i < 3; i++)
+    ASSERT_NEAR(val[i], b.GetData()[i], 1e-6);
+}
+
+///  ToString для всех значений TETypeMethod
+TEST(Properties_TETypeMethod, is_ETypeMethod_ToString_all)
+{
+  ASSERT_EQ("StandartMethod", (string)TETypeMethod<PropertiesTest>(StandartMethod));
+  ASSERT_EQ("IntegerMethod", (string)TETypeMethod<PropertiesTest>(IntegerMethod));
+  ASSERT_EQ("RSAMethod", (string)TETypeMethod<PropertiesTest>(RSAMethod));
+}
+
+///  FromString по имени для TETypeMethod
+TEST(Properties_TETypeMethod, is_ETypeMethod_FromString_byName)
+{
+  TETypeMethod<PropertiesTest> b;
+  b = std::string("RSAMethod");
+  ASSERT_EQ(RSAMethod, (ETypeMethod)b);
+}
+
+///  FromString по числовому коду для TETypeMethod
+TEST(Properties_TETypeMethod, is_ETypeMethod_FromString_byCode)
+{
+  TETypeMethod<PropertiesTest> b;
+  b = std::string("2");
+  ASSERT_EQ(RSAMethod, (ETypeMethod)b);
+}
+
+///  невалидная строка не меняет значение TETypeMethod
+TEST(Properties_TETypeMethod, is_ETypeMethod_FromString_invalid)
+{
+  TETypeMethod<PropertiesTest> b(IntegerMethod);
+  b = std::string("nonsense");
+  ASSERT_EQ(IntegerMethod, (ETypeMethod)b);
+}
+
+///  создание TETypeMethod с явным значением не бросает исключение
+TEST(Properties_TETypeMethod, can_create_ETypeMethod)
+{
+  ETypeMethod val = RSAMethod;
+  ASSERT_NO_THROW(TETypeMethod<PropertiesTest> a(val));
+}
+
+///  значение по умолчанию у TETypeMethod == StandartMethod
+TEST(Properties_TETypeMethod, is_ETypeMethod_default_value)
+{
+  TETypeMethod<PropertiesTest> b;
+  ASSERT_EQ(StandartMethod, (ETypeMethod)b);
+}
+
+///  инициализированное значение TETypeMethod соответствует ожидаемому (для каждого значения)
+TEST(Properties_TETypeMethod, is_init_ETypeMethod_value)
+{
+  ASSERT_EQ(StandartMethod, (ETypeMethod)TETypeMethod<PropertiesTest>(StandartMethod));
+  ASSERT_EQ(IntegerMethod, (ETypeMethod)TETypeMethod<PropertiesTest>(IntegerMethod));
+  ASSERT_EQ(RSAMethod, (ETypeMethod)TETypeMethod<PropertiesTest>(RSAMethod));
+}
+
+///  ToString для StandartMethod
+TEST(Properties_TETypeMethod, is_ETypeMethod_ToString_StandartMethod)
+{
+  TETypeMethod<PropertiesTest> b(StandartMethod);
+  ASSERT_EQ("StandartMethod", (string)b);
+}
+
+///  ToString для IntegerMethod
+TEST(Properties_TETypeMethod, is_ETypeMethod_ToString_IntegerMethod)
+{
+  TETypeMethod<PropertiesTest> b(IntegerMethod);
+  ASSERT_EQ("IntegerMethod", (string)b);
+}
+
+///  ToString для RSAMethod
+TEST(Properties_TETypeMethod, is_ETypeMethod_ToString_RSAMethod)
+{
+  TETypeMethod<PropertiesTest> b(RSAMethod);
+  ASSERT_EQ("RSAMethod", (string)b);
+}
+
+///  FromString по имени -> StandartMethod
+TEST(Properties_TETypeMethod, is_ETypeMethod_FromString_name_StandartMethod)
+{
+  TETypeMethod<PropertiesTest> b(RSAMethod);   // намеренно другое стартовое значение
+  b = std::string("StandartMethod");
+  ASSERT_EQ(StandartMethod, (ETypeMethod)b);
+}
+
+///  FromString по имени -> IntegerMethod
+TEST(Properties_TETypeMethod, is_ETypeMethod_FromString_name_IntegerMethod)
+{
+  TETypeMethod<PropertiesTest> b(StandartMethod);
+  b = std::string("IntegerMethod");
+  ASSERT_EQ(IntegerMethod, (ETypeMethod)b);
+}
+
+///  FromString по имени -> RSAMethod
+TEST(Properties_TETypeMethod, is_ETypeMethod_FromString_name_RSAMethod)
+{
+  TETypeMethod<PropertiesTest> b(StandartMethod);
+  b = std::string("RSAMethod");
+  ASSERT_EQ(RSAMethod, (ETypeMethod)b);
+}
+
+///  FromString по коду "0" -> StandartMethod
+TEST(Properties_TETypeMethod, is_ETypeMethod_FromString_code_0)
+{
+  TETypeMethod<PropertiesTest> b(RSAMethod);
+  b = std::string("0");
+  ASSERT_EQ(StandartMethod, (ETypeMethod)b);
+}
+
+///  FromString по коду "1" -> IntegerMethod
+TEST(Properties_TETypeMethod, is_ETypeMethod_FromString_code_1)
+{
+  TETypeMethod<PropertiesTest> b(StandartMethod);
+  b = std::string("1");
+  ASSERT_EQ(IntegerMethod, (ETypeMethod)b);
+}
+
+///  FromString по коду "2" -> RSAMethod
+TEST(Properties_TETypeMethod, is_ETypeMethod_FromString_code_2)
+{
+  TETypeMethod<PropertiesTest> b(StandartMethod);
+  b = std::string("2");
+  ASSERT_EQ(RSAMethod, (ETypeMethod)b);
+}
+
+///  невалидная строка НЕ меняет значение (парсер молча игнорирует)
+TEST(Properties_TETypeMethod, is_ETypeMethod_FromString_invalid_keeps_value)
+{
+  TETypeMethod<PropertiesTest> b(IntegerMethod);
+  b = std::string("nonsense");
+  ASSERT_EQ(IntegerMethod, (ETypeMethod)b);   // значение осталось прежним
+}
+
+///  пустая строка НЕ меняет значение
+TEST(Properties_TETypeMethod, is_ETypeMethod_FromString_empty_keeps_value)
+{
+  TETypeMethod<PropertiesTest> b(RSAMethod);
+  b = std::string("");
+  ASSERT_EQ(RSAMethod, (ETypeMethod)b);
+}
+
+///  код вне диапазона ("3") НЕ меняет значение
+TEST(Properties_TETypeMethod, is_ETypeMethod_FromString_out_of_range_code)
+{
+  TETypeMethod<PropertiesTest> b(StandartMethod);
+  b = std::string("3");
+  ASSERT_EQ(StandartMethod, (ETypeMethod)b);
+}
+
+///  чувствительность к регистру: "rsamethod" не распознаётся
+TEST(Properties_TETypeMethod, is_ETypeMethod_FromString_case_sensitive)
+{
+  TETypeMethod<PropertiesTest> b(StandartMethod);
+  b = std::string("rsamethod");
+  ASSERT_EQ(StandartMethod, (ETypeMethod)b);   // сравнение строгое, значение не поменялось
+}
+
+///  round-trip: value -> string -> value для всех значений
+TEST(Properties_TETypeMethod, is_ETypeMethod_roundtrip)
+{
+  ETypeMethod values[] = { StandartMethod, IntegerMethod, RSAMethod };
+  for (ETypeMethod v : values)
+  {
+    TETypeMethod<PropertiesTest> a(v);
+    string s = (string)a;                 // enum -> string
+    TETypeMethod<PropertiesTest> b(StandartMethod);
+    b = s;                                // string -> enum
+    ASSERT_EQ(v, (ETypeMethod)b) << "roundtrip failed for value " << (int)v;
+  }
+}
+
+///  GetData возвращает хранимое значение
+TEST(Properties_TETypeMethod, is_ETypeMethod_GetData_working)
+{
+  TETypeMethod<PropertiesTest> b(RSAMethod);
+  ASSERT_EQ(RSAMethod, b.GetData());
+}
+
+///  Clone создаёт копию с тем же значением
+TEST(Properties_TETypeMethod, is_ETypeMethod_Clone_working)
+{
+  TETypeMethod<PropertiesTest> b(IntegerMethod);
+  TETypeMethod<PropertiesTest>* c;
+  b.Clone((BaseProperty<PropertiesTest>**) & c);
+  ASSERT_EQ(IntegerMethod, c->GetData());
+}
+
+///  Copy копирует значение из другого объекта
+TEST(Properties_TETypeMethod, is_ETypeMethod_Copy_working)
+{
+  TETypeMethod<PropertiesTest> b(StandartMethod);
+  TETypeMethod<PropertiesTest> c(RSAMethod);
+  b.Copy((void*)&c);
+  ASSERT_EQ(RSAMethod, b.GetData());
+}
+
+///  GetIsChange корректно отражает факт изменения
+TEST(Properties_TETypeMethod, is_ETypeMethod_GetIsChange_working)
+{
+  TETypeMethod<PropertiesTest> b(StandartMethod);
+  ASSERT_EQ(false, b.GetIsChange());
+  b = RSAMethod;
+  ASSERT_EQ(true, b.GetIsChange());
+}
+
+///  Name / Help / Link работают
+TEST(Properties_TETypeMethod, is_ETypeMethod_name_help_link_working)
+{
+  TETypeMethod<PropertiesTest> b(StandartMethod);
+  b.SetName("tm");
+  b.SetHelp("Type of method");
+  b.SetLink("-tm");
+  ASSERT_EQ("tm", b.GetName());
+  ASSERT_EQ("Type of method", b.GetHelp());
+  ASSERT_EQ("-tm", b.GetLink());
+}
+
+///  IsFlag для TETypeMethod возвращает false
+TEST(Properties_TETypeMethod, is_ETypeMethod_IsFlag_working)
+{
+  TETypeMethod<PropertiesTest> b;
+  ASSERT_EQ(false, b.IsFlag());
+}
+
+///  GetCurrentStringValue формирует "name = value"
+TEST(Properties_TETypeMethod, is_ETypeMethod_GetCurrentStringValue_working)
+{
+  TETypeMethod<PropertiesTest> b(RSAMethod);
+  b.SetName("tm");
+  ASSERT_EQ("tm = RSAMethod", b.GetCurrentStringValue());
+}
+
+///  InitializationParameterProperty для TETypeMethod
+TEST(Properties_TETypeMethod, is_InitializationParameterProperty_ETypeMethod)
+{
+  int index = 20;
+  string link = "-tm";
+  string help = "Type of method";
+  string name = "tm";
+  string sep = "_";
+  string defVal = "RSAMethod";
+
+  PropertiesTest a;
+  TETypeMethod<PropertiesTest> b;
+
+  ASSERT_NO_THROW(b.InitializationParameterProperty(&a, &PropertiesTest::CheckValue,
+    index, sep, 1, name, help, link, defVal));
+
+  ASSERT_EQ(RSAMethod, (ETypeMethod)b);   // defVal распарсился
+  ASSERT_EQ(link, b.GetLink());
+  ASSERT_EQ(help, b.GetHelp());
+  ASSERT_EQ(name, b.GetName());
+}

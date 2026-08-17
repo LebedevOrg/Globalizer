@@ -59,7 +59,13 @@ public:
   SearchInterval* rightInterval;
 
   /// Цвет рисования точки
-  int TypeColor;
+  int TypeColor = 0;
+
+  /// Поле для хранения номера итерации
+  int iterationNumber = 0;
+
+  /// Время создания точки
+  double  creationTime = 0.0;
 
   /// Создает не вычесленное испытание в координате х=0
   Trial();
@@ -79,7 +85,7 @@ public:
   */
   void SetX(Extended d);
 
-  /// Присвоение координаты точки в одномерном прогстранстве
+  /// Присвоение координаты точки в одномерном пространстве
   virtual Trial& operator = (Extended d);
 
   /// Возвращает координату точки

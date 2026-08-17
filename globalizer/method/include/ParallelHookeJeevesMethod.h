@@ -45,7 +45,7 @@ protected:
 
 public:
 
-  ParallelHookeJeevesMethod(Task* _pTask, Trial _startPoint, Calculation& _calculation, int logPoints = 0);
+  ParallelHookeJeevesMethod(Task* _pTask, Trial _StartPoint, Calculation& _calculation, int logPoints = 0);
 
 //  virtual Trial StartOptimization();
 };

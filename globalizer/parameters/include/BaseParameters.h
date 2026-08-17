@@ -45,30 +45,30 @@ class BaseParameters : public CombinableBaseParameters
 
 protected:
   /// Массив свойств, определённых в других классах
-  IBaseValueClass** mOtherOptions;
+  IBaseValueClass** mOtherOptions = nullptr;
   /// Массив свойств, определённых в этом классе
-  BaseProperty<Owner>** mOptions;
+  BaseProperty<Owner>** mOptions = nullptr;
   /// Массив свойств, определённых в этом классе, приведённых к базовому типу
-  IBaseValueClass** mBaseTypeOptions;
+  IBaseValueClass** mBaseTypeOptions = nullptr;
   /// Количество опций
-  int mOptionsCount;
+  int mOptionsCount = 0;
   /// Количество опций из других классов
-  int mOtherOptionsCount;
+  int mOtherOptionsCount = 0;
   /// Максимальный размер массива параметров
-  int mOptionsSize;
+  int mOptionsSize = 200;
   /// Максимальный размер массива параметров, определённых в других классах
-  int mOtherOptionsSize;
+  int mOtherOptionsSize = 200;
 
   /// Печатать справку
-  bool mIsPrintHelp;
+  bool mIsPrintHelp = false;
   /// Имеются аргументы командной строки
-  bool mIsHaveArguments;
+  bool mIsHaveArguments = false;
   /// Владелец этого класса
-  Owner* mOwner;
+  Owner* mOwner = nullptr;
   /// Проинициализированы ли параметры
-  bool mIsInit;
+  bool mIsInit = false;
   /// Путь по умолчанию до конфигурационного файла
-  std::string mConfigPath;
+  std::string mConfigPath = "";
 
   /**
    * Проверка правильности после окончания чтения параметров

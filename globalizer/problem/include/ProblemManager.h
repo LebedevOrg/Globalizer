@@ -73,12 +73,12 @@ public:
   Код ошибки, возвращаемый методами #LoadProblemLibrary и #FreeProblemLibrary
   при успешном выполнении операций
   */
-  static const int OK_ = 0;
+  static constexpr int OK_ = 0;
   /**
   Код ошибки, возвращаемый методами #LoadProblemLibrary и #FreeProblemLibrary
   при ошибке во время выполнении операций
   */
-  static const int ERROR_ = -2;
+  static constexpr int ERROR_ = -2;
 
   ///Конструктор
   ProblemManager();
@@ -90,10 +90,10 @@ public:
   Метод загружает библиотеку, пытается импортировать из неё функции,
   создающие и уничтожающие задачу, а затем создаёт задачу
 
-  \param[in] libPath Путь к загружаемой библиотеке
+  \param[in] LibPath Путь к загружаемой библиотеке
   \return Код ошибки
   */
-  int LoadProblemLibrary(const std::string& libPath);
+  int LoadProblemLibrary(const std::string& LibPath);
 
   /** Метод возвращает указатель #mProblem
   */

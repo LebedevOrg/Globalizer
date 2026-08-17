@@ -18,11 +18,12 @@
 
 struct QueueElement
 {
-  QueueElement *pLinkedElement;
-  double Key;
-  void *pValue;
+  QueueElement *pLinkedElement = nullptr;
+  double Key = 0;
+  void *pValue = nullptr;
 
-  QueueElement() {}
+  QueueElement()
+  {}
   QueueElement(double _Key, void *_pValue) :
     Key(_Key), pValue(_pValue), pLinkedElement(0)
   {}

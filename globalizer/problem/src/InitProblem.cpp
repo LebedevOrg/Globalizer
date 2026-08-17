@@ -18,7 +18,7 @@
 int InitProblem(ProblemManager& problemManager, IProblem*& problem,
   int argc, char* argv[], bool isMPIInit)
 {
-  if (problemManager.LoadProblemLibrary(parameters.libPath) != ProblemManager::OK_)
+  if (problemManager.LoadProblemLibrary(parameters.LibPath) != ProblemManager::OK_)
   {
     //сообщение об ошибке печатает manager
     return 1;
@@ -29,7 +29,7 @@ int InitProblem(ProblemManager& problemManager, IProblem*& problem,
   problem = baseProblem;
   if (newProblem == 0)
   {
-    problem->SetConfigPath(parameters.libConfigPath);
+    problem->SetConfigPath(parameters.LibConfigPath);
     if (problem->Initialize() != ProblemManager::OK_)
     {
       std::cout << "Error during problem initialization\n";
@@ -50,7 +50,7 @@ int InitProblem(ProblemManager& problemManager, IProblem*& problem,
   }
   else
   {
-    problem->SetConfigPath(parameters.libConfigPath);
+    problem->SetConfigPath(parameters.LibConfigPath);
     newProblem->SetInitParam(argc, argv, isMPIInit);
     if (problem->Initialize() != ProblemManager::OK_)
     {
@@ -85,8 +85,8 @@ void ReadParameters(IGlobalOptimizationProblem*& problem)
 // ------------------------------------------------------------------------------------------------
 int InitProblemGlobalizerBenchmarks(GlobalOptimizationProblemManager& problemManager, IGlobalOptimizationProblem*& problem)
 {
-  std::string libPath = parameters.libPath;
-  if (problemManager.LoadProblemLibrary(libPath) != GlobalOptimizationProblemManager::OK_)
+  std::string LibPath = parameters.LibPath;
+  if (problemManager.LoadProblemLibrary(LibPath) != GlobalOptimizationProblemManager::OK_)
   {
     //сообщение об ошибке печатает manager
     return 1;
@@ -118,10 +118,10 @@ int InitProblemGlobalizerBenchmarks(GlobalOptimizationProblemManager& problemMan
   int err = baseProblem->GetStartTrial(y, u, values);
   if ((err == IGlobalOptimizationProblem::PROBLEM_OK) && parameters.IsUseStartPoint)
   {
-    parameters.startPoint.SetSize(baseProblem->GetDimension() - baseProblem->GetNumberOfDiscreteVariable());
+    parameters.StartPoint.SetSize(baseProblem->GetDimension() - baseProblem->GetNumberOfDiscreteVariable());
     for (int i = 0; i < baseProblem->GetDimension() - baseProblem->GetNumberOfDiscreteVariable(); i++)
     {
-      parameters.startPoint[i] = y[i];
+      parameters.StartPoint[i] = y[i];
     }
   }
 

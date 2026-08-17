@@ -30,11 +30,11 @@ public:
     return new Trial();
   }
 
-  static Trial* CreateTrial(const OBJECTIV_TYPE* startPoint)
+  static Trial* CreateTrial(const OBJECTIV_TYPE* StartPoint)
   {
     Trial* res;
     res = new Trial();
-    memcpy(res->y, startPoint, parameters.Dimension * sizeof(double));
+    memcpy(res->y, StartPoint, parameters.Dimension * sizeof(double));
 
     return res;
   }

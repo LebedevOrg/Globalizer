@@ -29,7 +29,7 @@ SearchData::SearchData(int _NumOfFuncs, int _MaxSize)
   Count = 0;
   pRoot = pCur = NULL;
 
-  if (parameters.localMix == 0)
+  if (parameters.LocalMix == 0)
     pQueue = new PriorityQueue(DefaultQueueSize);
   else
     pQueue = new PriorityDualQueue(DefaultQueueSize);
@@ -61,7 +61,7 @@ SearchData::SearchData(int _NumOfFuncs, int _MaxSize, int _queueSize)
   Count = 0;
   pRoot = pCur = NULL;
 
-  if (parameters.localMix == 0)
+  if (parameters.LocalMix == 0)
     pQueue = new PriorityQueue(_queueSize);
   else
     pQueue = new PriorityDualQueue(_queueSize);

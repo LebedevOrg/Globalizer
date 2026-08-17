@@ -165,7 +165,10 @@ public:
   /// Возвращает Размер массива элементов
   virtual int GetSize();
 
-  TStrings() : ParameterProperty<std::string*, Owner>(0) { }
+  TStrings() : ParameterProperty<std::string*, Owner>(0) 
+  { 
+    this->mSize = 0; 
+  }
   TStrings(std::string* value, int size) : ParameterProperty<std::string*, Owner>(0)
   {
     if (size > 0)
@@ -206,7 +209,10 @@ public:
   /// Возвращает Размер массива элементов
   virtual int GetSize();
 
-  TInts() : ParameterProperty<int*, Owner>(0) { }
+  TInts() : ParameterProperty<int*, Owner>(0) 
+  {
+    this->mSize = 0;
+  }
 
   TInts(int* value, int size) : ParameterProperty<int*, Owner>(0)
   {
@@ -248,7 +254,10 @@ public:
   /// Возвращает Размер массива элементов
   virtual int GetSize();
 
-  TDoubles() : ParameterProperty<double*, Owner>(0) { }
+  TDoubles() : ParameterProperty<double*, Owner>(0) 
+  {
+    this->mSize = 0;
+  }
 
   TDoubles(double* value, int size) : ParameterProperty<double*, Owner>(0)
   {

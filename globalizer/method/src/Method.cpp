@@ -23,6 +23,7 @@
 #include "TrialFactory.h"
 #include "CalculationFactory.h"
 #include "ParallelHookeJeevesMethod.h"
+#include "SerializeToDashBoard.h"
 
 #include "OMPCalculation.h"
 
@@ -40,7 +41,7 @@
 
 // ------------------------------------------------------------------------------------------------
 Method::Method(Task& _pTask, SearchData& _pData,
-  Calculation& _Calculation, Evolvent& _Evolvent) :
+  Calculation& _Calculation, IEvolvent& _Evolvent) :
   pTask(_pTask), pData(&_pData),
   calculation(_Calculation), evolvent(_Evolvent)
 {
@@ -67,7 +68,7 @@ Method::Method(Task& _pTask, SearchData& _pData,
     throw EXCEPTION("Epsilon reserv parameter is out of range");
   }
 
-  alfa = parameters.localAlpha; // пока локальная адаптация - фиксированная
+  alfa = parameters.LocalAlpha; // пока локальная адаптация - фиксированная
 
 
 
@@ -84,19 +85,19 @@ Method::Method(Task& _pTask, SearchData& _pData,
   iteration.pCurTrials.resize(parameters.NumPoints);
 
   //===========================================================================================================================================
-  mu = new double[pTask.GetNumOfFunc()];
-  for (int i = 0; i < pTask.GetNumOfFunc(); i++)
+  mu = new double[pTask.GetNumOfFunc() + 1];
+  for (int i = 0; i < pTask.GetNumOfFunc() + 1; i++)
     mu[i] = 0;
-  Xmax = new double[pTask.GetNumOfFunc()];
-  for (int i = 0; i < pTask.GetNumOfFunc(); i++)
+  Xmax = new double[pTask.GetNumOfFunc() + 1];
+  for (int i = 0; i < pTask.GetNumOfFunc() + 1; i++)
     Xmax[i] = 0;
   //===========================================================================================================================================
 
 
-  if (parameters.Dimension == 1)
+  if (pTask.GetNumberOfContinuousVariable() == 1)
     StartLocalIteration = 5;
   else
-    StartLocalIteration = parameters.Dimension * 70 / parameters.NumPoints;
+    StartLocalIteration = pTask.GetNumberOfContinuousVariable() * 70 / parameters.NumPoints;
 
   functionCalculationCount.resize(pTask.GetNumOfFunc());
   for (int i = 0; i < pTask.GetNumOfFunc(); i++)
@@ -127,6 +128,10 @@ Method::Method(Task& _pTask, SearchData& _pData,
 // ------------------------------------------------------------------------------------------------
 Method::~Method()
 {
+  delete[] mu;    
+  mu = nullptr;
+  delete[] Xmax;  
+  Xmax = nullptr;
 }
 
 
@@ -172,7 +177,7 @@ double Method::Update_r(int iter, int procLevel)
   if (iterationCount <= 0)
     iterationCount = 1;
 
-  double p = 1.0 / parameters.Dimension;
+  double p = 1.0 / pTask.GetNumberOfContinuousVariable();
   double resR = baseR + parameters.rDynamic / pow(iterationCount, p);
 
   return resR;
@@ -198,7 +203,7 @@ void Method::CalculateCurrentPoint(Trial& pCurTrialsj, SearchInterval* BestInter
     pCurTrialsj.SetX(0.5 * (BestIntervalsj->xl() + BestIntervalsj->xr()) -
       (((BestIntervalsj->zr() - BestIntervalsj->zl()) > 0) ? 1 : -1) *
       pow(fabs(BestIntervalsj->zr() - BestIntervalsj->zl()) /
-        pData->M[BestIntervalsj->izl()], parameters.Dimension) / 2 / parameters.r);
+        pData->M[BestIntervalsj->izl()], pTask.GetNumberOfContinuousVariable()) / 2 / parameters.r);
   }
 
   pCurTrialsj.leftInterval = BestIntervalsj;
@@ -228,11 +233,39 @@ void Method::LoadPoint()
   SearchDataSerializer::LoadedFileData fd;
   if (pointsPathExtension == "json")
   {
-    parameters.serializer->LoadFromFile(pointsPath, fd);
-    newPoint = fd.trials;
-    numberLoadedPoints = newPoint.size();
-    for (auto trial : newPoint)
-      pData->GetTrials().push_back(trial);
+    if (parameters.IsSerializeToDashBoard)
+    {
+      SerializeToDashBoard dashBoardSerializer;
+      Trial* outBestTrial = nullptr;
+
+      bool loadResult = dashBoardSerializer.LoadFromFile(pointsPath, newPoint, outBestTrial, &pTask);
+
+      if (loadResult)
+      {
+        numberLoadedPoints = newPoint.size();
+        for (auto trial : newPoint)
+          pData->GetTrials().push_back(trial);
+
+        // Если загружена лучшая точка - обновляем оценку оптимума
+        if (outBestTrial != nullptr)
+        {
+          UpdateOptimumEstimation(*outBestTrial);
+        }
+      }
+      else
+      {
+        print << "SerializeToDashBoard::LoadFromFile failed to load file: " << pointsPath << "\n";
+      }
+    }
+    else
+    {
+      parameters.serializer->LoadFromFile(pointsPath, fd);
+      newPoint = fd.trials;
+      numberLoadedPoints = newPoint.size();
+
+      for (auto trial : newPoint)
+        pData->GetTrials().push_back(trial);
+    }
   }
   else
   {
@@ -257,7 +290,7 @@ void Method::LoadPoint()
 
       while (!input.eof()) {
         size_t nextPosition = 0;
-        std::vector<double> currentPoint(parameters.Dimension);
+        std::vector<double> currentPoint(pTask.GetN());
         double curVal;
         int s = currentLine.size();
         input.getline(&currentLine[0], currentLine.size());
@@ -277,7 +310,7 @@ void Method::LoadPoint()
 
         currentPoint[0] = std::stod(curStr, &nextPosition);
 
-        for (int iDim = 1; iDim < parameters.Dimension; iDim++)
+        for (int iDim = 1; iDim < pTask.GetN(); iDim++)
         {
           curStr = curStr.substr(nextPosition);
           currentPoint[iDim] = std::stod(curStr, &nextPosition);
@@ -310,7 +343,7 @@ void Method::LoadPoint()
       for (int i = 0; i < numberLoadedPoints; i++)
       {
         newPoint[i] = TrialFactory::CreateTrial();
-        for (int iDim = 0; iDim < parameters.Dimension; iDim++)
+        for (int iDim = 0; iDim < pTask.GetN(); iDim++)
         {
           newPoint[i]->y[iDim] = points[i][iDim];
         }
@@ -378,9 +411,9 @@ void Method::FirstIteration()
       pData->SetBestTrial(p->LeftPoint);
 
     //====================================================================
-    if ((parameters.isCalculationInBorderPoint == true) || (parameters.LocalTuningType != 0))
+    if ((parameters.IsCalculationInBorderPoint == true) || (parameters.LocalTuningType != 0))
     {
-      //if (parameters.Dimension == 1)
+      //if (pTask.GetNumberOfContinuousVariable() == 1)
       {
         // Эта функция вызывается только в листе дерева - поэтому вычисляем функционалы здесь
         for (int j = 0; j < pTask.GetNumOfFunc(); j++)
@@ -426,7 +459,7 @@ void Method::FirstIteration()
   // Равномерно ставим NumPoints точек c шагом h
   // А надо бы случайно...
   double h = 1.0 / (parameters.NumPoints + 1);
-  if (parameters.startPoint.GetIsChange() && parameters.IsUseStartPoint) //берем начальную точку из параметров
+  if (parameters.StartPoint.GetIsChange() && parameters.IsUseStartPoint) //берем начальную точку из параметров
   {
 
     int firstPointCount = parameters.NumPoints - 1;
@@ -435,17 +468,17 @@ void Method::FirstIteration()
     std::vector<Trial*> newPoint(parameters.NumPoints);
     newPoint[0] = TrialFactory::CreateTrial();
 
-    pTask.CopyPoint(parameters.startPoint.GetData(), newPoint[0]);
+    pTask.CopyPoint(parameters.StartPoint.GetData(), newPoint[0]);
 
     InformationForCalculation inputlocal;
     TResultForCalculation outputlocal;
     int sfipi = 0;
 
-    if (parameters.startPointValues.GetIsChange())
+    if (parameters.StartPointValues.GetIsChange())
     {
-      for (int ifv = 0; ifv < parameters.startPointValues.GetSize(); ifv++)
+      for (int ifv = 0; ifv < parameters.StartPointValues.GetSize(); ifv++)
       {
-        newPoint[0]->FuncValues[ifv] = parameters.startPointValues[ifv];
+        newPoint[0]->FuncValues[ifv] = parameters.StartPointValues[ifv];
         if ((ifv == (pTask.GetNumOfFunc() - 1)) || (newPoint[0]->FuncValues[ifv] > 0))
         {
           newPoint[0]->index = ifv;
@@ -508,7 +541,7 @@ void Method::FirstIteration()
     this->iteration.IterationCount += 1;
     parameters.iterationNumber = iteration.IterationCount;
   }
-  else if (!parameters.isLoadFirstPointFromFile) // равномерно распределяем начальные точки
+  else if (!parameters.IsLoadFirstPointFromFile) // равномерно распределяем начальные точки
   {
     for (int q = 0; q < parameters.NumPoints; q++)
     {
@@ -533,7 +566,7 @@ void Method::FirstIteration()
         iteration.pCurTrials[ind] = TrialFactory::CreateTrial();
         pData->GetTrials().push_back(iteration.pCurTrials[ind]);
 
-        for (size_t iCNP = 0; iCNP < parameters.Dimension; iCNP++)
+        for (size_t iCNP = 0; iCNP < pTask.GetNumberOfContinuousVariable(); iCNP++)
         {
           iteration.pCurTrials[ind]->y[iCNP] = pTask.GetA()[iCNP] + ((double(q) + 1.0) * h) * (pTask.GetB()[iCNP] - pTask.GetA()[iCNP]);
         }
@@ -608,9 +641,9 @@ void Method::CalculateIterationPoints()
   // испытаний
   std::vector<SearchInterval*> BestIntervals(parameters.NumPoints);
 
-  int localMix = parameters.localMix;
+  int LocalMix = parameters.LocalMix;
 
-  if (GetIterationType(iteration.IterationCount, localMix) == Global)
+  if (GetIterationType(iteration.IterationCount, LocalMix) == Global)
   {
 
     pData->GetBestIntervals(BestIntervals.data(), parameters.NumPoints);
@@ -655,7 +688,7 @@ bool Method::CheckStopCondition()
   }
   else
   {
-    switch (parameters.stopCondition)
+    switch (parameters.StopCondition)
     {
     case Accuracy:
       if (AchievedAccuracy < parameters.Epsilon)
@@ -668,7 +701,7 @@ bool Method::CheckStopCondition()
       if (pTask.getProblem()->GetAllOptimumPoint(allOptimumPoints, numOfOptima) ==
         IProblem::UNDEFINED)
       {
-        for (int i = 0; i < parameters.Dimension; i++)
+        for (int i = 0; i < pTask.GetN(); i++)
         {
           double fabsx = fabs(pData->GetBestTrial()->y[i] - pTask.GetOptimumPoint()[i]);
           double fm = parameters.Epsilon * (pTask.GetB()[i] - pTask.GetA()[i]);
@@ -683,16 +716,16 @@ bool Method::CheckStopCondition()
       {
         for (int j = 0; j < numOfOptima; j++)
         {
-          for (int i = 0; i < parameters.Dimension; i++)
+          for (int i = 0; i < pTask.GetN(); i++)
           {
-            double fabsx = fabs(pData->GetBestTrial()->y[i] - allOptimumPoints[parameters.Dimension * j + i]);
+            double fabsx = fabs(pData->GetBestTrial()->y[i] - allOptimumPoints[pTask.GetN() * j + i]);
             double fm = parameters.Epsilon * (pTask.GetB()[i] - pTask.GetA()[i]);
             if (fabsx > fm)
             {
               res = false;
               break;
             }
-            if (i == parameters.Dimension - 1)
+            if (i == pTask.GetN() - 1)
             {
               res = true;
             }
@@ -778,6 +811,10 @@ void Method::CalculateFunctionals()
   {
     if (outputSet.trials[i] == 0)
       iteration.pCurTrials[i] = 0;
+    else if (parameters.TypeCalculation == AsyncMPI)
+    {
+      iteration.pCurTrials[i] = outputSet.trials[i];
+    }
   }
 
   for (int j = 0; j < pTask.GetNumOfFunc(); j++)
@@ -820,7 +857,7 @@ void Method::InsertLocalPoints(const std::vector<Trial*>& points, Task* task)
       points[j]->K = 1;
 
     SearchInterval* p = pData->InsertPoint(CoveringInterval, *currentPoint,
-      iteration.IterationCount, parameters.Dimension);
+      iteration.IterationCount, pTask.GetNumberOfContinuousVariable());
 
     UpdateOptimumEstimation(*currentPoint);
 
@@ -883,16 +920,17 @@ void Method::InsertPoints(const std::vector<Trial*>& points)
     currentPoint->SetX(x);
     SearchInterval* CoveringInterval = pData->FindCoveringInterval(currentPoint);
 
+    if (!CoveringInterval)
+        continue;
+
     if (AchievedAccuracy > CoveringInterval->delta)
       AchievedAccuracy = CoveringInterval->delta;
 
-    if (!CoveringInterval)
-      throw EXCEPTION("Covering interval does not exists");
     if (!(currentPoint->X() < CoveringInterval->xr() || currentPoint->X() > CoveringInterval->xl()))
       throw EXCEPTION("Wrong covering interval");
 
     SearchInterval* p = pData->InsertPoint(CoveringInterval, *currentPoint,
-      iteration.IterationCount, parameters.Dimension);
+      iteration.IterationCount, pTask.GetNumberOfContinuousVariable());
 
     UpdateOptimumEstimation(*currentPoint);
 
@@ -902,7 +940,7 @@ void Method::InsertPoints(const std::vector<Trial*>& points)
       CalculateM(CoveringInterval);
       this->iteration.IterationCount++;
     }
-    
+
   }
 }
 
@@ -926,9 +964,9 @@ bool Method::UpdateOptimumEstimation(Trial& trial)
 // ------------------------------------------------------------------------------------------------
 void Method::SavePoints()
 {
-  if (static_cast<std::string>(parameters.iterPointsSavePath).size() > 0)
+  if (static_cast<std::string>(parameters.IterPointsSavePath).size() > 0)
   {
-    if (parameters.iterPointsSavePath.ToString() != "")
+    if (parameters.IterPointsSavePath.ToString() != "")
     {
       SearcDataIterator it = pData->GetBeginIterator();
 
@@ -967,9 +1005,9 @@ double Method::CalculateGlobalR(SearchInterval* p)
 
     }
   }
-  else if ((p->izl() == -3) || (p->izr() == -3))
+  else if ((p->izl() == -3) && (p->izr() == -3) || (p->izl() == -3) && (p->izr() == -2) || (p->izl() == -2) && (p->izr() == -3))
   {
-    return MinDouble;
+    return parameters.alpha * (1 - 1 / parameters.r) * (1 - 1 / parameters.r) * deltax;
   }
   else if (p->izl() == p->izr())
   {
@@ -1070,16 +1108,16 @@ void Method::CalculateM(SearchInterval* p)
         ++i;
       //Если обнаружили точку с большим или равным индексом, то вычисляем оценку константы
       if (i != NULL && p->izl() <= i->izl() && IsIntervalInSegment(p, (*i)))
-        UpdateM(fabs(i->z()[p->izl()] - p->zl()) / root(i->xl() - p->xl(), parameters.Dimension), p->izl(), boundaryStatus, p);
-    // Просмотр влево до обнаружения точки с большим или равным индексом,
-    // или до левой границы интервала поиска
+        UpdateM(fabs(i->z()[p->izl()] - p->zl()) / root(i->xl() - p->xl(), pTask.GetNumberOfContinuousVariable()), p->izl(), boundaryStatus, p);
+      // Просмотр влево до обнаружения точки с большим или равным индексом,
+      // или до левой границы интервала поиска
       i = pData->GetIterator(p);
       --i;
       while (i != NULL && p->izl() > i->izl() && IsIntervalInSegment(p, (*i)))
         --i;
       //Если обнаружили точку с большим или равным индексом, то вычисляем оценку константы
       if (i != NULL && p->izl() <= i->izl() && IsIntervalInSegment(p, (*i)))
-        UpdateM(fabs(i->z()[p->izl()] - p->zl()) / root(p->xl() - i->xl(), parameters.Dimension), p->izl(), boundaryStatus, p);
+        UpdateM(fabs(i->z()[p->izl()] - p->zl()) / root(p->xl() - i->xl(), pTask.GetNumberOfContinuousVariable()), p->izl(), boundaryStatus, p);
     }
     else
     {
@@ -1146,7 +1184,7 @@ SearchInterval* Method::AddCurrentPoint(Trial& pCurTrialsj, SearchInterval* Best
   }
 
   // Гельдеровская длина интервала
-  NewInterval->delta = root(NewInterval->xr() - NewInterval->xl(), parameters.Dimension);
+  NewInterval->delta = root(NewInterval->xr() - NewInterval->xl(), pTask.GetNumberOfContinuousVariable());
 
   // Корректируем существующий интервал
   (BestIntervalsj)->RightPoint = NewInterval->LeftPoint;
@@ -1158,13 +1196,20 @@ SearchInterval* Method::AddCurrentPoint(Trial& pCurTrialsj, SearchInterval* Best
     AchievedAccuracy = (BestIntervalsj)->delta;
   }
   // После чего вычисляем новую гельдеровскую длину лучшего интервала
-  (BestIntervalsj)->delta = root((BestIntervalsj)->xr() - (BestIntervalsj)->xl(), parameters.Dimension);
-  //(BestIntervalsj)->delta = root((BestIntervalsj)->xr() - (BestIntervalsj)->xl(), parameters.Dimension);
-  //    (*BestIntervalsj)->delta = pow((*BestIntervalsj)->dx,1.0/parameters.Dimension);
+  (BestIntervalsj)->delta = root((BestIntervalsj)->xr() - (BestIntervalsj)->xl(), pTask.GetNumberOfContinuousVariable());
+  //(BestIntervalsj)->delta = root((BestIntervalsj)->xr() - (BestIntervalsj)->xl(), pTask.GetNumberOfContinuousVariable());
+  //    (*BestIntervalsj)->delta = pow((*BestIntervalsj)->dx,1.0/pTask.GetNumberOfContinuousVariable());
 
   int j = BestIntervalsj->izr();
   if (BestIntervalsj->izl() > j)
     j = BestIntervalsj->izl();
+
+  if (j < 0) 
+    j = 0; // отрицательные индексы (-2/-3) недопустимы
+
+  if (j > pTask.GetNumOfFunc()) 
+    j = pTask.GetNumOfFunc();
+
 
   if (Xmax[j] < (BestIntervalsj)->delta)
   {
@@ -1174,6 +1219,12 @@ SearchInterval* Method::AddCurrentPoint(Trial& pCurTrialsj, SearchInterval* Best
   j = NewInterval->izr();
   if (NewInterval->izl() > j)
     j = NewInterval->izl();
+
+  if (j < 0) 
+    j = 0;
+
+  if (j > pTask.GetNumOfFunc())
+    j = pTask.GetNumOfFunc();
 
   if (Xmax[j] < (NewInterval)->delta)
   {
@@ -1309,37 +1360,37 @@ int Method::GetIterationCount()
 
 
 // ------------------------------------------------------------------------------------------------
-IterationType Method::GetIterationType(int iterationNumber, int localMixParameter)
+IterationType Method::GetIterationType(int iterationNumber, int LocalMixParameter)
 {
   if (iterationNumber < StartLocalIteration)
     return   Global;
 
   IterationType type;
-  if (localMixParameter > 0) {
-    localMixParameter++;
+  if (LocalMixParameter > 0) {
+    LocalMixParameter++;
 
-    if (iterationNumber % localMixParameter != 0)
+    if (iterationNumber % LocalMixParameter != 0)
       type = Global;
     else
       type = Local;
   }
-  else if (localMixParameter < 0) {
-    localMixParameter = -localMixParameter;
-    localMixParameter++;
+  else if (LocalMixParameter < 0) {
+    LocalMixParameter = -LocalMixParameter;
+    LocalMixParameter++;
 
-    if (iterationNumber % localMixParameter != 0)
+    if (iterationNumber % LocalMixParameter != 0)
       type = Local;
     else
       type = Global;
   }
-  else //localMixParameter == 0
+  else //LocalMixParameter == 0
     type = Global;
 
   return type;
 }
 
 // ------------------------------------------------------------------------------------------------
-int Method::IsBoundary(SearchInterval* p) 
+int Method::IsBoundary(SearchInterval* p)
 {
   int ans = 0;
   if (p->izl() == -2)
@@ -1444,7 +1495,7 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
         ++i;
       if (i != NULL && p->izl() == i->izl() && IsIntervalInSegment(p, (*i)) && p->izl() == j)
       {
-        temp = fabs(i->z()[p->izl()] - p->zl()) / root(i->xl() - p->xl(), parameters.Dimension);
+        temp = fabs(i->z()[p->izl()] - p->zl()) / root(i->xl() - p->xl(), pTask.GetNumberOfContinuousVariable());
         if (temp > mu[j])
           mu[j] = temp;
       }
@@ -1455,7 +1506,7 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
         --i;
       if (i != NULL && p->izl() == i->izl() && IsIntervalInSegment(p, (*i)) && p->izl() == j)
       {
-        temp = fabs(i->z()[p->izl()] - p->zl()) / root(p->xl() - i->xl(), parameters.Dimension);
+        temp = fabs(i->z()[p->izl()] - p->zl()) / root(p->xl() - i->xl(), pTask.GetNumberOfContinuousVariable());
         if (temp > mu[j])
           mu[j] = temp;
       }
@@ -1490,9 +1541,9 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
     gamma = (mu[j] * p->delta) / Xmax[j];
 
     //Запоминаем конечное мю
-    if (parameters.ltXi > pData->M[index] || pData->M[index] == 1.0 && newValue > _M_ZERO_LEVEL)
+    if (parameters.LtXi > pData->M[index] || pData->M[index] == 1.0 && newValue > _M_ZERO_LEVEL)
     {
-      pData->M[index] = parameters.ltXi;
+      pData->M[index] = parameters.LtXi;
       pData->SetRecalc(true);
 
 
@@ -1544,7 +1595,7 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
     if (newValue > mu[0]) {
       mu[0] = newValue;
     }
-    Xm = p->delta;//pow(p->delta, parameters.Dimension);
+    Xm = p->delta;//pow(p->delta, pTask.GetNumberOfContinuousVariable());
 
     if (isSearchXMax)
     {
@@ -1566,13 +1617,13 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
         Xmax[0] = Xm;
       }
     }
-    gamma = (mu[0] * p->delta) / Xmax[0];//pow(Xmax, 1. / parameters.Dimension);
+    gamma = (mu[0] * p->delta) / Xmax[0];//pow(Xmax, 1. / pTask.GetNumberOfContinuousVariable());
     //gamma = mu;
 
     //Запоминаем конечное мю
-    if (parameters.ltXi > pData->M[index] || pData->M[index] == 1.0 && newValue > _M_ZERO_LEVEL)
+    if (parameters.LtXi > pData->M[index] || pData->M[index] == 1.0 && newValue > _M_ZERO_LEVEL)
     {
-      pData->M[index] = parameters.ltXi;
+      pData->M[index] = parameters.LtXi;
       pData->SetRecalc(true);
 
     }
@@ -1649,7 +1700,7 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
     if (newValue > mu[0]) {
       mu[0] = newValue;
     }
-    Xm = p->delta;//pow(p->delta, parameters.Dimension);
+    Xm = p->delta;//pow(p->delta, pTask.GetNumberOfContinuousVariable());
 
     if (isSearchXMax)
     {
@@ -1671,11 +1722,11 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
         Xmax[0] = Xm;
       }
     }
-    gamma = (mu[0] * p->delta) / Xmax[0];//pow(Xmax, 1. / parameters.Dimension);
+    gamma = (mu[0] * p->delta) / Xmax[0];//pow(Xmax, 1. / pTask.GetNumberOfContinuousVariable());
 
     //Запоминаем конечное мю
-    if (parameters.ltXi > pData->M[index] || pData->M[index] == 1.0 && newValue > _M_ZERO_LEVEL) {
-      pData->M[index] = parameters.ltXi;
+    if (parameters.LtXi > pData->M[index] || pData->M[index] == 1.0 && newValue > _M_ZERO_LEVEL) {
+      pData->M[index] = parameters.LtXi;
       pData->SetRecalc(true);
     }
 
@@ -1687,7 +1738,7 @@ void Method::UpdateM(double newValue, int index, int boundaryStatus, SearchInter
     }
 
     //H = fabs(p->zr() - p->zl()) / (p->xr() - p->xl());
-    H = newValue / pow(p->delta, parameters.Dimension - 1);
+    H = newValue / pow(p->delta, pTask.GetNumberOfContinuousVariable() - 1);
 
     if (H > pData->M[index]) {
       pData->M[index] = H;
@@ -1736,7 +1787,7 @@ void Method::PrintSection()
 // ------------------------------------------------------------------------------------------------
 void Method::SaveCurrentProgress()
 {
-  if (parameters.fileSerializer.ToString().empty()) return;
+  if (parameters.FileSerializer.ToString().empty()) return;
 
   // Получаем новые точки и интервалы с последнего сохранения
   std::vector<Trial*> newTrials;
@@ -1760,7 +1811,12 @@ void Method::SaveCurrentProgress()
     intervalCounter++;
   }
 
-  parameters.serializer->SaveProgress(parameters.fileSerializer.ToString(), newTrials, newIntervals, pData->GetBestTrial());
+  std::string pointsPathExtension = GetFileExtension(parameters.FileSerializer.ToString());
+
+  if (pointsPathExtension == "")
+    parameters.FileSerializer = parameters.FileSerializer.ToString() + ".json";
+
+  parameters.serializer->SaveProgress(parameters.FileSerializer.ToString(), newTrials, newIntervals, pData->GetBestTrial());
 
   lastSavedTrialsCount = allTrials.size();
 }
@@ -1889,11 +1945,11 @@ void Method::HookeJeevesMethod(Trial& point, std::vector<Trial*>& localPoints)
   double initialStep = 0;
   for (int i = 0; i < pTask.GetN(); i++)
     initialStep += pTask.GetB()[i] - pTask.GetA()[i];
-  initialStep /= parameters.Dimension;
+  initialStep /= pTask.GetNumberOfContinuousVariable();
   // начальный шаг равен среднему размеру стороны гиперкуба, умноженному на коэффициент
-  localMethod->SetEps(parameters.localVerificationEpsilon);
+  localMethod->SetEps(parameters.LocalVerificationEpsilon);
   localMethod->SetInitialStep(0.07 * initialStep);
-  localMethod->SetMaxTrials(parameters.localIteration);
+  localMethod->SetMaxTrials(parameters.LocalIteration);
   Trial newpoint2 = localMethod->StartOptimization();
   Trial* newpoint = TrialFactory::CreateTrial(&newpoint2);
 
@@ -1931,21 +1987,21 @@ void Method::HookeJeevesMethod(Trial& point, std::vector<Trial*>& localPoints)
 // ------------------------------------------------------------------------------------------------
 void Method::LocalSearch()
 {
-  if (((parameters.localRefineSolution == FinalStart && isStop) ||
-    (parameters.localRefineSolution == UpdatedMinimum))
+  if (((parameters.LocalRefineSolution == FinalStart && isStop) ||
+    (parameters.LocalRefineSolution == UpdatedMinimum))
     && GetOptimEstimation()->index == pTask.GetNumOfFunc() - 1)
   {
 
     int oldNP = parameters.NumPoints;
     int oldNT = parameters.NumThread;
 
-    if (parameters.localVerificationNumPoint <= 0)
+    if (parameters.LocalVerificationNumPoint <= 0)
     {
-      parameters.localVerificationNumPoint = parameters.NumPoints;
+      parameters.LocalVerificationNumPoint = parameters.NumPoints;
     }
 
-    parameters.NumPoints = parameters.localVerificationNumPoint.GetData();
-    parameters.NumThread = parameters.localVerificationNumPoint.GetData();
+    parameters.NumPoints = parameters.LocalVerificationNumPoint.GetData();
+    parameters.NumThread = parameters.LocalVerificationNumPoint.GetData();
 
     numberLocalMethodtStart++;
     std::vector<Trial*> localPoints;
@@ -1978,13 +2034,13 @@ void Method::LocalSearch()
     double initialStep = 0;
     for (int i = 0; i < pTask.GetN(); i++)
       initialStep += pTask.GetB()[i] - pTask.GetA()[i];
-    initialStep /= parameters.Dimension;
+    initialStep /= pTask.GetNumberOfContinuousVariable();
     // начальный шаг равен среднему размеру стороны гиперкуба, умноженному на коэффициент
-    localMethod->SetEps(parameters.localVerificationEpsilon);
+    localMethod->SetEps(parameters.LocalVerificationEpsilon);
 
     localMethod->SetInitialStep(0.07 * initialStep);
 
-    localMethod->SetMaxTrials(parameters.localIteration);
+    localMethod->SetMaxTrials(parameters.LocalIteration);
     Trial point2 = localMethod->StartOptimization();
     Trial* newpoint = TrialFactory::CreateTrial(&point2);
 
@@ -2018,7 +2074,7 @@ void Method::LocalSearch()
 
     localPointCount += localMethod->GetTrialsCounter();
 
-    if (parameters.localRefineSolution == UpdatedMinimum)
+    if (parameters.LocalRefineSolution == UpdatedMinimum)
       pData->SetRecalc(true);
 
   }

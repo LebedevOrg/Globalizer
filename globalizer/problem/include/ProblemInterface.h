@@ -43,13 +43,13 @@ class IProblem
 public:
 
   /// Код ошибки, возвращаемый, если операция завершена успешно
-  static const int OK = 0;
+  static constexpr int OK = 0;
   /** Код ошибки, возвращаемый методами #GetOptimumValue и #GetOptimumPoint,
   если соответствующие параметры задачи не определены,
   */
-  static const int UNDEFINED = -1;
+  static constexpr int UNDEFINED = -1;
   /// Код ошибки, возвращаемый, если операция не выполнена
-  static const int ERROR = -2;
+  static constexpr int ERROR = -2;
 
   /** Задание пути до конфигурационного файла
 
@@ -180,7 +180,7 @@ class IIntegerProgrammingProblem : public IGPUProblem
 {
 public:
   /// Код ошибки, возвращаемый, если попытались получить значения для недискретного параметра
-  static const int ERROR_DISCRETE_VALUE = -201;
+  static constexpr int ERROR_DISCRETE_VALUE = -201;
   /// Возвращает число дискретных параметров, дискретные параметры всегда последние в векторе y
   virtual int GetNumberOfDiscreteVariable() = 0;
   /**

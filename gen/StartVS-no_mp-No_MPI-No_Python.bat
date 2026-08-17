@@ -13,8 +13,6 @@ cd build_64_nmmp
 git submodule init
 git submodule update
 
-call conda init
-
 
 echo [1/2] CMake Configuration...
 call cmake -DGLOBALIZER_BUILD_PROBLEMS=ON -DGLOBALIZER_MAX_DIMENSION=130 -DGLOBALIZER_MAX_Number_Of_Function=70 -DGLOBALIZER_PYTHON=OFF -DGLOBALIZER_BUILD_GCGEN=ON -Drastrigin_build=ON -DrastriginInt_build=ON -DX2_build=ON -Dstronginc3_build=ON -DrastriginC1_build=ON -DGLOBALIZER_BENCHMARKS_PYTHON=OFF ..
@@ -25,7 +23,14 @@ echo [2/2] Opening Visual Studio...
 if exist "globalizer.sln" (call "globalizer.sln") else if exist "globalizer.slnx" (call "globalizer.slnx") else echo Error: globalizer not found!
 
 cd /d "%START_DIR%"
-echo.
-
 exit /b 0
 
+:error
+echo.
+echo ========================================
+echo  BUILD CONFIGURATION FAILED (errorlevel %errorlevel%)
+echo  Смотрите сообщения выше.
+echo ========================================
+cd /d "%START_DIR%"
+pause
+exit /b 1

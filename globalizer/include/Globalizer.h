@@ -76,3 +76,10 @@ SolutionResult* GlobalizerSolveProblem(IProblem*& problem);
   \param[in] argv - Аргументы командной строки
 */
 void CreateCurentProblemsParameters(int argc, char* argv[]);
+
+/**
+Выбор решателя, true - Solver, false - HDSolver
+\param[in] problem - задача оптимизации
+
+*/
+bool SelectSolver(IProblem* problem);

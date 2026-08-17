@@ -117,6 +117,7 @@ public:
   friend Extended operator/(const double& e1, const Extended& e2);
 
   friend Extended fabs(const Extended& e);
+  friend Extended ceil(const Extended& x, const Extended& extZero);
   friend double floor(const Extended& e);
   friend Extended pow(const Extended& e, double degree);
   // this method is used for distance between two points

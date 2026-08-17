@@ -80,7 +80,7 @@ protected:
   - множественная сдвиговая развертка
   - множественная вращаемая развертка
   */
-  Evolvent& evolvent;
+  IEvolvent& evolvent;
 
   // ----------------------------------------------------------------------------
   // Внутренние данные метода
@@ -169,14 +169,14 @@ protected:
   /** Определение типа текущей итерации: локальная или глобальная
 
   \param[in] iterationNumber номер итерации
-  \param[in] localMixParameter параметр смешивания локального и глобального алгоритмов.
+  \param[in] LocalMixParameter параметр смешивания локального и глобального алгоритмов.
   Возможны три варианта:
-  - localMixParameter == 0 - работает только глобальный алгоритм
-  - localMixParameter > 0 - выполняется localMixParameter глобальных итераций, затем - одна локальная
-  - localMixParameter < 0 - выполняется localMixParameter локальных итераций, затем - одна глобальная
+  - LocalMixParameter == 0 - работает только глобальный алгоритм
+  - LocalMixParameter > 0 - выполняется LocalMixParameter глобальных итераций, затем - одна локальная
+  - LocalMixParameter < 0 - выполняется LocalMixParameter локальных итераций, затем - одна глобальная
   \return тип итерации
   */
-  virtual IterationType GetIterationType(int iterationNumber, int localMixParameter);
+  virtual IterationType GetIterationType(int iterationNumber, int LocalMixParameter);
   /** Определение, является интервал граничным или нет
   0 - Не граничный; 1 - Левая граница; 2 - Правая граница
   */
@@ -244,7 +244,7 @@ protected:
 public:
 
   Method(Task& _pTask, SearchData& _pData,
-    Calculation& _Calculation, Evolvent& _Evolvent);
+    Calculation& _Calculation, IEvolvent& _Evolvent);
   virtual ~Method();
 
   /** Функция выполняет первую итерацию метода

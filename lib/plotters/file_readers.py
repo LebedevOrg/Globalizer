@@ -7,7 +7,7 @@ def ReadTrialsFile(dir, file_for_reading):
         z = []
         x_nc = []
         z_nc = []
-
+        x_nce = []
         cc = []
 
         isFirst = True
@@ -32,31 +32,36 @@ def ReadTrialsFile(dir, file_for_reading):
             splitedline = line.split(' | ')
 
             value = splitedline[1].split(' ')
-
             point = splitedline[0].split(' ')
 
             xi = []
             for j in range(len(point)):
                 xi.append(float(point[j]))
 
-            if len(value) >= num_of_func:
+            if (value[0] == '|'):
+                x_nce.append(xi)
+            elif len(value) >= num_of_func:
                 zi = float(value[num_of_func - 1])
                 x.append(xi)
                 z.append(zi)
             else:
-                zi = float(value[len(value) - 1])
+                #zi = float(value[len(value) - 1])
                 x_nc.append(xi)
-                z_nc.append(zi)
+                z_nc.append(0)  # заглушка, лишний параметр
 
-            i = 0
-            while i != len(value) - 1:
-                cc[i * 2].append(xi)
-                cc[i * 2 + 1].append(float(value[i]))
-                i += 1
+
+            if (value[0] != '|'):
+                i = 0
+                while i != len(value) - 1:
+                    cc[i * 2].append(xi)
+                    cc[i * 2 + 1].append(float(value[i]))
+                    i += 1
 
             iters_count = iters_count - 1
 
-    return x, z, sol_x, sol_z, x_nc, z_nc, cc
+    print("Uncalculate point\'s count: ", len(x_nce))
+
+    return x, z, sol_x, sol_z, x_nc, z_nc, cc, x_nce
 
 def ReadProblemFile(dir, file_for_reading):
     with open(dir + file_for_reading) as file:
@@ -66,8 +71,13 @@ def ReadProblemFile(dir, file_for_reading):
         x = []
         z = []
         c = []
-
+        is_objective_calc = False
+        is_constraints_calc = False
         isFirst = True
+        isSecond = True
+
+        recalc_count = 0
+        prev_val = 0
 
         for line in file:
             if isFirst:
@@ -81,22 +91,42 @@ def ReadProblemFile(dir, file_for_reading):
                     rb.append(float(val))
                 isFirst = False
                 continue
+            if isSecond:
+                splitedline = line.split(' ')
+                is_objective_calc = bool(int(splitedline[0]))
+                is_constraints_calc = bool(int(splitedline[1]))
+                isSecond = False
+                continue
 
-            splitedline = line.split(' | ')
+            if is_objective_calc or is_constraints_calc:  # необязательная проверка, для надежности от пустых строк
+                splitedline = line.split(' | ')
 
-            point = splitedline[0].split(' ')
-            value = splitedline[len(splitedline) - 1].split(' ')
+                point = splitedline[0].split(' ')
 
-            xi = []
-            for j in range(len(point)):
-                xi.append(float(point[j]))
-            x.append(xi)
-            z.append(float(value[0]))
+                xi = []
+                for j in range(len(point)):
+                    xi.append(float(point[j]))
+                x.append(xi)
 
-            ci = []
-            for j in range(1, len(splitedline) - 1):
-                ci.append(float(splitedline[j].split(' ')[0]))
-            if len(ci) > 0:
-                c.append(ci)
+                if is_objective_calc:
+                    values = splitedline[len(splitedline) - 1].split(' ')
+                    if float(values[0]) < 1.7e308:
+                        if recalc_count > 0:
+                            next_val = float(values[0])
+                            for i in range(recalc_count):
+                                z.append((prev_val + next_val) * 0.5)
+                            recalc_count = 0
+                        z.append(float(values[0]))
+
+                    else:
+                        if recalc_count == 0:
+                            prev_val = z[-1]
+                        recalc_count += 1
+
+                ci = []
+                for j in range(1, len(splitedline) - is_objective_calc):
+                    ci.append(float(splitedline[j].split(' ')[0]))
+                if len(ci) > 0:
+                    c.append(ci)
 
     return dim, lb, rb, x, z, c

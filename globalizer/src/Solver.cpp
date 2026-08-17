@@ -21,6 +21,9 @@
 #include <codecvt>
 #include <cwchar>
 
+#include "../../lib/nlohmann_json/json.hpp"
+
+#include "SerializeToDashBoard.h"
 
 // ------------------------------------------------------------------------------------------------
 void Solver::ClearData()
@@ -55,6 +58,11 @@ Solver::Solver(IProblem* problem)
   isExternalTask = false;
 
   addPoints = nullptr;
+
+  m_initialized = false;
+
+  // Настраиваем параметры
+  AutoConfig();
 }
 
 #ifdef _GLOBALIZER_BENCHMARKS
@@ -65,11 +73,160 @@ Solver::Solver(IGlobalOptimizationProblem* problem) : Solver::Solver(new Globali
 #endif
 
 // ------------------------------------------------------------------------------------------------
+int Solver::Initialize()
+{
+  try
+  {
+    if (m_initialized) return 0;
+
+    parameters.FileSerializer = "../result.json";
+    if (CheckParameters()) return 1;
+
+    if ((parameters.CalculationsArray[0] == MPI_calc) && (parameters.GetProcNum() > 1) && (parameters.GetProcRank() > 0))
+    {
+      MpiCalculation();
+      m_initialized = true;
+      return 0;
+    }
+    if ((parameters.TypeCalculation == AsyncMPI) && (parameters.GetProcNum() > 1) && (parameters.GetProcRank() > 0))
+    {
+      AsyncCalculation();
+      m_initialized = true;
+      return 0;
+    }
+    ClearData();
+    CreateProcess();
+    if (addPoints != nullptr)
+      mProcess->InsertPoints(*addPoints);
+
+    if (mProcess->isFirstRun)
+      mProcess->BeginIterations();
+
+    m_initialized = true;
+    return 0;
+  }
+  catch (const Exception& e)
+  {
+    std::string excFileName = std::string("exception_init_") + toString(parameters.GetProcRank()) + ".txt";
+    e.Print(excFileName.c_str());
+    for (int i = 0; i < parameters.GetProcNum(); i++)
+      if (i != parameters.GetProcRank())
+        MPI_Abort(MPI_COMM_WORLD, i);
+    return 1;
+  }
+  catch (...)
+  {
+    print << "\nUNKNOWN EXCEPTION in Initialize()!!!\n";
+    std::string excFileName = std::string("exception_init_") + toString(parameters.GetProcRank()) + ".txt";
+    Exception e("UNKNOWN", -1, "Initialize", "Unknown error");
+    e.Print(excFileName.c_str());
+    for (int i = 0; i < parameters.GetProcNum(); i++)
+      if (i != parameters.GetProcRank())
+        MPI_Abort(MPI_COMM_WORLD, i);
+    return 1;
+  }
+}
+
+// ------------------------------------------------------------------------------------------------
+int Solver::DoIteration(bool& finished)
+{
+  finished = false;
+
+  if (!m_initialized) return 1;
+  if (!mProcess || mProcess->IsOptimumFound)
+  {
+    finished = true;
+    return 0;
+  }
+
+  try
+  {
+    mProcess->DoIteration();
+
+    if (mProcess->IsOptimumFound)
+    {
+      finished = true;
+      if (parameters.GetProcRank() == 0 && parameters.GetProcNum() > 1)
+      {
+        for (int i = 1; i < parameters.GetProcNum(); i++)
+        {
+          int finish = 1;
+          MPI_Send(&finish, 1, MPI_INT, i, TagChildSolved, MPI_COMM_WORLD);
+        }
+      }
+      mProcess->EndIterations();
+    }
+
+    if (finished && parameters.IsPlot)
+    {
+#ifdef USE_PYTHON
+      std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+      std::wstring wstring = converter.from_bytes(parameters.GetPlotFileName());
+      wchar_t* output_file_name = new wchar_t[wstring.size() + 1];
+      wcscpy(output_file_name, wstring.c_str());
+      bool show_figure = parameters.ShowFigure;
+      bool hide_trials_points = parameters.HideTrialsPoints;
+      bool move_points_under_graph = parameters.MoveTrialPointsUnderGraph;
+      bool fill_feasible_region = parameters.FillFeasibleRegion;
+      bool hide_no_feasible_points = parameters.HideNoFeasiblePoints;
+      FigureTypes figure_type = parameters.FigureType;
+      CalcsTypes calcs_type = parameters.CalcsType;
+      CalcsTypes calcs_type_c = parameters.CalcsTypeC;
+      int levels = parameters.Levels;
+      int objective_grid_size = parameters.ObjectiveGridSize;
+      int constraints_grid_size = parameters.ConstraintsGridSize;
+      int continuous_params_num = this->pTask->GetNumberOfContinuousVariable();
+
+      Plotter::draw_plot(this->mProblem, GetSolutionResult(), { 0, 1 }, {}, continuous_params_num, output_file_name, figure_type, calcs_type, calcs_type_c, levels, objective_grid_size, constraints_grid_size, fill_feasible_region, hide_trials_points, hide_no_feasible_points, move_points_under_graph, show_figure);
+#else
+      print <<
+        "\n=======================================================================\n"
+        "WARNING: The launch was performed WITHOUT rendering using the built-in Plotter.\n"
+        "\n"
+        "To use the built-in plotter and visualize the problem being solved,\n"
+        "follow the instructions for building the project using Plotter:\n"
+        "\n"
+        "https://globalizer-documentation.readthedocs.io/en/latest/source/html/installation/inst-win.html\n"
+        "(Section 3.5: Building Globalizer for Plotter)\n"
+        "\n"
+        "or follow the instructions for starting visualization using existing files:\n"
+        "\n"
+        "https://globalizer-documentation.readthedocs.io/en/latest/source/html/start_of_work.html\n"
+        "(Section 3: Visualization)\n"
+        "=======================================================================\n\n";
+#endif
+    }
+
+    return 0;
+  }
+  catch (const Exception& e)
+  {
+    std::string excFileName = std::string("exception_step_") + toString(parameters.GetProcRank()) + ".txt";
+    e.Print(excFileName.c_str());
+    for (int i = 0; i < parameters.GetProcNum(); i++)
+      if (i != parameters.GetProcRank())
+        MPI_Abort(MPI_COMM_WORLD, i);
+    return 1;
+  }
+  catch (...)
+  {
+    print << "\nUNKNOWN EXCEPTION in DoIteration()!!!\n";
+    std::string excFileName = std::string("exception_step_") + toString(parameters.GetProcRank()) + ".txt";
+    Exception e("UNKNOWN", -1, "DoIteration", "Unknown error");
+    e.Print(excFileName.c_str());
+    for (int i = 0; i < parameters.GetProcNum(); i++)
+      if (i != parameters.GetProcRank())
+        MPI_Abort(MPI_COMM_WORLD, i);
+    return 1;
+  }
+}
+
+// ------------------------------------------------------------------------------------------------
 int Solver::CheckParameters()
 {
   double optimumValue;
   if (mProblem->GetOptimumValue(optimumValue) == IProblem::UNDEFINED &&
-    parameters.stopCondition == OptimumValue)
+    parameters.StopCondition == OptimumValue)
   {
     print << "Stop by reaching optimum value is unsupported by this problem\n";
     return 1;
@@ -80,20 +237,20 @@ int Solver::CheckParameters()
 
   if (mProblem->GetOptimumPoint(optimumPoint) == IProblem::OK)
   {
-    if (parameters.stopCondition.GetIsChange() == false)
+    if (parameters.StopCondition.GetIsChange() == false)
     {
-      parameters.stopCondition = OptimumVicinity2;
+      parameters.StopCondition = OptimumVicinity2;
     }
   }
   else
   {
     if (mProblem->GetAllOptimumPoint(optimumPoint, n) == IProblem::UNDEFINED)
     {
-      if (parameters.stopCondition != Accuracy)
+      if (parameters.StopCondition != Accuracy)
       {
         print << "Stop by reaching optimum vicinity is unsupported by this problem\n";
         print << "Stop Condition change to Accuracy!!!\n";
-        parameters.stopCondition = Accuracy;
+        parameters.StopCondition = Accuracy;
       }
     }
   }
@@ -110,30 +267,13 @@ int Solver::CheckParameters()
     }
   }
 
-  if (parameters.automaticParametersSetting)
-  {
-    if (parameters.MaxNumOfPoints > 100
-      && parameters.NumThread.GetIsChange() == false && parameters.NumPoints.GetIsChange() == false
-      && parameters.TypeCalculation == OMP)
-    {
-      if (parameters.Dimension > 2 && parameters.Dimension < 10 && parameters.startPoint.GetIsChange() == false)
-      {
-        parameters.NumThread = std::max(int(parameters.GetMaxNumOMP() / 2), 1);
-        parameters.NumPoints = parameters.NumThread;
-      }
-      if (parameters.Dimension > 5
-        && parameters.r.GetIsChange() == false)
-      {
-        parameters.r = parameters.r * 2;
-      }
-    }
-  }
+
 
   if (parameters.IsPlot)
   {
-    if (parameters.iterPointsSavePath.GetIsChange() == false)
+    if (parameters.IterPointsSavePath.GetIsChange() == false)
     {
-      parameters.iterPointsSavePath = "Globalizer_iterPointsSavePath.txt";
+      parameters.IterPointsSavePath = "Globalizer_IterPointsSavePath.txt";
     }
   }
 
@@ -161,10 +301,10 @@ void Solver::MpiCalculation()
 
     Trial* trail = TrialFactory::CreateTrial();
 
-    inputSet.Resize(parameters.mpiBlockSize);
-    outputSet.Resize(parameters.mpiBlockSize);
+    inputSet.Resize(parameters.MpiBlockSize);
+    outputSet.Resize(parameters.MpiBlockSize);
 
-    for (unsigned int j = 0; j < parameters.mpiBlockSize; j++)
+    for (unsigned int j = 0; j < parameters.MpiBlockSize; j++)
     {
       inputSet.trials[j] = TrialFactory::CreateTrial();
       // Получаем координаты точки
@@ -179,16 +319,16 @@ void Solver::MpiCalculation()
     IProblem* _problem = mProblem;
     Task* _pTask = TaskFactory::CreateTask(_problem, 0);;
     Calculation* calculation;
-    if (parameters.calculationsArray[1] == OMP) {
+    if (parameters.CalculationsArray[1] == OMP) {
       calculation = new OMPCalculation(*_pTask);
     }
-    else if (parameters.calculationsArray[1] == CUDA) {
+    else if (parameters.CalculationsArray[1] == CUDA) {
       calculation = new CUDACalculation(*_pTask);
     }
 
     calculation->Calculate(inputSet, outputSet);
 
-    for (unsigned int j = 0; j < parameters.mpiBlockSize; j++) {
+    for (unsigned int j = 0; j < parameters.MpiBlockSize; j++) {
       // Отправляем обратно значение функции
       MPI_Send(inputSet.trials[j]->FuncValues, MaxNumOfFunc, MPI_DOUBLE, 0, TagChildSolved, MPI_COMM_WORLD);
     }
@@ -275,7 +415,7 @@ int Solver::Solve()
     if (CheckParameters())
       return 1;
 
-    if ((parameters.calculationsArray[0] == MPI_calc) && (parameters.GetProcNum() > 1) && (parameters.GetProcRank() > 0))
+    if ((parameters.CalculationsArray[0] == MPI_calc) && (parameters.GetProcNum() > 1) && (parameters.GetProcRank() > 0))
     {
       MpiCalculation();
     }
@@ -291,6 +431,20 @@ int Solver::Solve()
         mProcess->InsertPoints(*addPoints);
       mProcess->Solve();
 
+      if (parameters.IsSerializeToDashBoard)
+      {
+        if (parameters.FileSerializer.ToString().empty())
+        {
+          parameters.FileSerializer = parameters.GetJsonFileName();
+        }
+
+        auto result = this->GetSolutionResult();
+        std::vector<Trial*> bt;
+        bt.push_back(pData->GetBestTrial());
+        SerializeToDashBoard serializer;
+        serializer.SaveFullState("SerializeToDashBoard_" + parameters.FileSerializer.ToString(), pData, *result, pTask, parameters, pData->GetTrials(), bt);
+
+      }
       if (parameters.IsPlot)
       {
 #ifdef USE_PYTHON
@@ -300,13 +454,34 @@ int Solver::Solve()
         wcscpy(output_file_name, wstring.c_str());
         bool show_figure = parameters.ShowFigure;
         bool hide_trials_points = parameters.HideTrialsPoints;
-        bool move_points_under_graph = false;
-        FigureTypes figure_type =parameters.FigureType;
+        bool move_points_under_graph = parameters.MoveTrialPointsUnderGraph;
+        bool fill_feasible_region = parameters.FillFeasibleRegion;
+        bool hide_no_feasible_points = parameters.HideNoFeasiblePoints;
+        FigureTypes figure_type = parameters.FigureType;
         CalcsTypes calcs_type = parameters.CalcsType;
+        CalcsTypes calcs_type_c = parameters.CalcsTypeC;
+        int levels = parameters.Levels;
+        int objective_grid_size = parameters.ObjectiveGridSize;
+        int constraints_grid_size = parameters.ConstraintsGridSize;
+        int continuous_params_num = this->pTask->GetNumberOfContinuousVariable();
 
-        Plotter::draw_plot(this->mProblem, GetSolutionResult(), { 0, 1 }, {}, output_file_name, figure_type, calcs_type, show_figure, hide_trials_points, move_points_under_graph);
+        Plotter::draw_plot(this->mProblem, GetSolutionResult(), { 0, 1 }, {}, continuous_params_num, output_file_name, figure_type, calcs_type, calcs_type_c, levels, objective_grid_size, constraints_grid_size, fill_feasible_region, hide_trials_points, hide_no_feasible_points, move_points_under_graph, show_figure);
 #else
-        print << "Plotter is not work!!!\nPython libraries doesn't find!!!\n";
+        print <<
+          "\n=======================================================================\n"
+          "WARNING: The launch was performed WITHOUT rendering using the built-in Plotter.\n"
+          "\n"
+          "To use the built-in plotter and visualize the problem being solved,\n"
+          "follow the instructions for building the project using Plotter:\n"
+          "\n"
+          "https://globalizer-documentation.readthedocs.io/en/latest/source/html/installation/inst-win.html\n"
+          "(Section 3.5: Building Globalizer for Plotter)\n"
+          "\n"
+          "or follow the instructions for starting visualization using existing files:\n"
+          "\n"
+          "https://globalizer-documentation.readthedocs.io/en/latest/source/html/start_of_work.html\n"
+          "(Section 3: Visualization)\n"
+          "=======================================================================\n\n";
 #endif
       }
     }
@@ -477,6 +652,8 @@ SolutionResult* Solver::GetSolutionResult()  /// best point
   result->BestTrial = mProcess->GetOptimEstimation();
   result->IterationCount = mProcess->GetIterationCount();
   result->TrialCount = mProcess->GetNumberOfTrials();
+  result->SolvingTime = mProcess->GetSolveTime();
+
   return result;
 }
 
@@ -499,8 +676,47 @@ Task* Solver::GetTask()
 }
 
 
-/// Возвращает поисковую информацию
+
+// ------------------------------------------------------------------------------------------------
 SearchData* Solver::GetData()
 {
   return pData;
+}
+
+// ------------------------------------------------------------------------------------------------
+void Solver::AutoConfig()
+{
+  if (parameters.IterationsCount.GetIsChange() == true)
+  {
+    if (parameters.MaxNumOfPoints.GetIsChange() == false)
+    {
+      parameters.MaxNumOfPoints = parameters.IterationsCount;
+    }
+  }
+  else
+  {
+    if (parameters.IterationsCount.GetIsChange() == false)
+    {
+      parameters.IterationsCount = parameters.MaxNumOfPoints;
+    }
+  }
+
+  if (parameters.AutomaticParametersSetting)
+  {
+    if (parameters.MaxNumOfPoints > 100
+      && parameters.NumThread.GetIsChange() == false && parameters.NumPoints.GetIsChange() == false
+      && parameters.TypeCalculation == OMP)
+    {
+      if (parameters.Dimension > 2 && parameters.Dimension < 10 && parameters.StartPoint.GetIsChange() == false)
+      {
+        parameters.NumThread = std::max(int(parameters.GetMaxNumOMP() / 2), 1);
+        parameters.NumPoints = parameters.NumThread;
+      }
+      if (parameters.Dimension > 5
+        && parameters.r.GetIsChange() == false)
+      {
+        parameters.r = parameters.r * 2;
+      }
+    }
+  }
 }

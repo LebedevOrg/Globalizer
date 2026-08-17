@@ -30,15 +30,17 @@ int main(int argc, char* argv[])
     return 0;
   }
   problem = new GlobalizerBenchmarksProblem(globalizerBenchmarksProblem);
-#else
+#else  
+  parameters.Dimension = 50;
   problem = new ProblemFromFunctionPointers(parameters.Dimension, // размерность задачи
     std::vector<double>(parameters.Dimension, -2.2), // нижняя граница
     std::vector<double>(parameters.Dimension, 1.8), //  верхняя граница
-    std::vector<std::function<double(const double*)>>(1, [](const double* y)
+    std::vector<std::function<double(const double*)>>(1, [&](const double* y)
       {
+        int dim = problem->GetDimension();
         double pi_ = 3.14159265358979323846;
         double sum = 0.;
-        for (int j = 0; j < parameters.Dimension; j++)
+        for (int j = 0; j < dim; j++)
           sum += y[j] * y[j] - 10. * cos(2.0 * pi_ * y[j]) + 10.0;
         return sum;
       }), // критерий
@@ -49,12 +51,25 @@ int main(int argc, char* argv[])
   problem->Initialize();
 #endif
 
-  SolutionResult* result = GlobalizerSolveProblem(problem);
+  ISolver* solver;
+
+  if (SelectSolver(problem))
+  {
+    solver = new Solver(problem);
+  }
+  else
+  {
+    solver = new HDSolver(problem);
+  }
+
+  // Решаем задачу
+  if (solver->Solve() != SYSTEM_OK)
+    throw EXCEPTION("Error: solver.Solve crash!!!");
 
 
+  if (parameters.IsMPIInit())
+    MPI_Finalize();
 
-
-  MPI_Finalize();
   return 0;
 }
 // - end of file ----------------------------------------------------------------------------------

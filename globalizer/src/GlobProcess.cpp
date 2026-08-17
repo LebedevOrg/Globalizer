@@ -23,6 +23,7 @@
 #include "Common.h"
 #include "GlobProcess.h"
 #include "MethodFactory.h"
+#include "EvolventFactory.h"
 #include "MPICalculationAsync.h"
 
 
@@ -44,14 +45,11 @@ pData(&data), pTask(&task)
 {
   isFirstRun = true;
 
-  if (parameters.MapType == mpBase)
-    evolvent = new Evolvent(parameters.Dimension - pTask->GetNumberOfDiscreteVariable(), parameters.m);
-  else
-    throw EXCEPTION("Unknown type of evolvent");
+  pEvolvent = EvolventFactory::CreateEvolvent(pTask->GetNumberOfContinuousVariable(), parameters.m);
 
-  calculation = CalculationFactory::CreateCalculation(*pTask, evolvent);
+  calculation = CalculationFactory::CreateCalculation(*pTask, pEvolvent);
 
-  pMethod = MethodFactory::CreateMethod(*pTask, *pData, *calculation, *evolvent);
+  pMethod = MethodFactory::CreateMethod(*pTask, *pData, *calculation, *pEvolvent);
 
   functionCalculationCount.resize(pTask->GetNumOfFunc());
 
@@ -68,7 +66,7 @@ Process::~Process()
 {
   delete calculation;
   delete pMethod;
-  delete evolvent;
+  delete pEvolvent;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -95,7 +93,7 @@ void Process::Solve()
 
     if (!pTask->IsLeaf())
     {
-      if (!(pMethod->GetIterationCount() % parameters.StepPrintMessages) && parameters.isPrintResultToConsole)
+      if (!(pMethod->GetIterationCount() % parameters.StepPrintMessages) && parameters.IsPrintResultToConsole)
       {
         print << "process 0, iteration " << pMethod->GetIterationCount() << "\t point count = " << pData->GetCount() << "\n";
         Trial* p = (pMethod->GetOptimEstimation());
@@ -109,11 +107,11 @@ void Process::Solve()
         }
       }
       
-      if (static_cast<std::string>(parameters.iterPointsSavePath).size())
+      if (static_cast<std::string>(parameters.IterPointsSavePath).size())
       {
         if (!(pMethod->GetIterationCount() % parameters.StepSavePoint))
         {
-          pMethod->PrintPoints(std::to_string(pMethod->GetIterationCount()) + "_" + parameters.iterPointsSavePath.ToString());
+          pMethod->PrintPoints(std::to_string(pMethod->GetIterationCount()) + "_" + parameters.IterPointsSavePath.ToString());
         }
       }
     }
@@ -131,8 +129,6 @@ void Process::Solve()
     }
 
   }
-
-
 
   EndIterations();
 
@@ -157,21 +153,18 @@ void Process::Reset(SearchData* data, Task* task)
   isFirstRun = true;
   pData = data;
   pTask = task;
-  if (evolvent == 0)
+  if (pEvolvent == 0)
   {
-    if (parameters.MapType == mpBase)
-      evolvent = new Evolvent(parameters.Dimension, parameters.m);
-    else
-      throw EXCEPTION("Unknown type of evolvent");
+      pEvolvent = EvolventFactory::CreateEvolvent(pTask->GetNumberOfContinuousVariable(), parameters.m);
   }
   if (calculation == 0)
-    calculation = CalculationFactory::CreateCalculation(*pTask, evolvent);
+    calculation = CalculationFactory::CreateCalculation(*pTask, pEvolvent);
   else
     calculation->SetTask(pTask);
 
   if (pMethod != 0)
     delete pMethod;
-  pMethod = MethodFactory::CreateMethod(*pTask, *pData, *calculation, *evolvent);
+  pMethod = MethodFactory::CreateMethod(*pTask, *pData, *calculation, *pEvolvent);
 
   functionCalculationCount.clear();
   functionCalculationCount.resize(pTask->GetNumOfFunc());
@@ -366,7 +359,7 @@ void Process::OldPrintOptimEstimationToConsole(Trial OptimEstimation)
 // ------------------------------------------------------------------------------------------------
 void Process::PrintOptimEstimationToConsole(Trial OptimEstimation)
 {
-  if (parameters.isPrintResultToConsole)
+  if (parameters.IsPrintResultToConsole)
   {
     int NumberOfTrials;
     double ValueDifference = HUGE_VAL;
@@ -437,7 +430,7 @@ void Process::PrintOptimEstimationToConsole(Trial OptimEstimation)
     bool res = false;
     double AchievedAccuracy = 0.0;
 
-    switch (parameters.stopCondition)
+    switch (parameters.StopCondition)
     {
     case Accuracy:
       if (pMethod->GetAchievedAccuracy() < parameters.Epsilon)
@@ -742,6 +735,7 @@ void Process::DoIteration()
 
       pMethod->CalculateFunctionals();
 
+
       for (int j = 0; j < pTask->GetNumOfFunc(); j++)
       {
         functionCalculationCount[j] += pMethod->GetFunctionCalculationCount()[j];
@@ -791,10 +785,10 @@ void Process::EndIterations()
   ////Локальное уточнение найденного решения
   pMethod->LocalSearch();
   //Запись в файл точек испытаний
-  //if (ProcLevel == 0 && static_cast<std::string>(parameters.iterPointsSavePath).size())
-  //  pMethod->PrintPoints(parameters.iterPointsSavePath);
-  if (pTask->GetProcLevel() == 0 && static_cast<std::string>(parameters.iterPointsSavePath).size())
-    pMethod->PrintPoints(parameters.iterPointsSavePath);
+  //if (ProcLevel == 0 && static_cast<std::string>(parameters.IterPointsSavePath).size())
+  //  pMethod->PrintPoints(parameters.IterPointsSavePath);
+  if (pTask->GetProcLevel() == 0 && static_cast<std::string>(parameters.IterPointsSavePath).size())
+    pMethod->PrintPoints(parameters.IterPointsSavePath);
   else
     pMethod->SavePoints();
 }

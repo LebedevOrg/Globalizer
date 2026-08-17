@@ -21,9 +21,14 @@
 class QueueBaseData
 {
 protected:
+
   /// Элемент очереди, хранящий этот интервал
   QueueElement* queueElementa;
 public:
+
+  /// Виртуальный деструктор
+  virtual ~QueueBaseData() {}
+
   virtual void SetQueueElementa(QueueElement* q)
   {
     queueElementa = q;

@@ -13,8 +13,8 @@ class TDualQueueTest : public ::testing::Test
 protected:
   /// Указатель на очередь
   PriorityDualQueue* queue;
-  static const int MaxDualQueueSize = 33554431;
-  static const int maxSize = 3;
+  static constexpr int MaxDualQueueSize = 33554431;
+  static constexpr int maxSize = 3;
   void SetUp()
   {
     queue = new PriorityDualQueue(maxSize);

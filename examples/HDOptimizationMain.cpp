@@ -32,14 +32,16 @@ int main(int argc, char* argv[])
 
   // Решатель
   HDSolver solver(problem);
+
   // Решаем задачу
   if (solver.Solve() != SYSTEM_OK)
     throw EXCEPTION("Error: solver.Solve crash!!!");
 
 #endif
 
+  if (parameters.IsMPIInit())
+    MPI_Finalize();
 
-  MPI_Finalize();
   return 0;
 }
 // - end of file ----------------------------------------------------------------------------------

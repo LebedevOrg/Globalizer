@@ -13,58 +13,67 @@ protected:
 
   /// Решатели для оптимизации по группам параметров
   std::vector< Solver*> solvers;
-  /// Решатель для объединения всех остальных Решателей
-  Solver* finalSolver;
-  /// Размерости групп парамеров, по умолчанию по 1
-  std::vector<int> dimensions;
-  /// Решение задачи оптимизации
-  SolutionResult* solutionResult;
-  /// Размерность исходной задачи
-  int originalDimension;
   /// Задачи для оптимизации по группам параметров
   std::vector <HDTask*> tasks;
 
+  /// Решатель для объединения всех остальных Решателей
+  Solver* finalSolver;
+
+  /// Размерности групп параметров,
+  /// по умолчанию по 1,
+  /// дискретные включены в последнюю группу
+  std::vector<int> dimensions;
+
+  /// Решение задачи оптимизации
+  SolutionResult* solutionResult;
+
+  /// Размерность исходной задачи
+  int originalDimension;
+  /// Количество дискретных параметров исходной задачи
+  int originalDiscreteParamsNum;
+
   /// Общее описание задачи
   Task* pTask;
-  /// База данных(поисковая информация)
+  /// Задача оптимизации
+  IProblem* problem;
+  /// База данных (поисковая информация)
   SearchData* pData;
 
-  /// задача оптимизации
-  IProblem* problem;
-
+  /// Входной файл с поисковой информацией
   SearchDataSerializer::LoadedFileData fd;
 
+  /// Количество итераций без улучшений решения
   int countIterationsWithoutImprovement = 0;
 
-  /// альтернативная стартовая точка на случай если не удалось улучшить решение
+  /// Альтернативная стартовая точка на случай, если не удалось улучшить решение
   std::vector<double> alternativeStartingPoint;
 
-  /// Задачть размерности
+  /// Задает размерности по группам параметров
   void SetDimentions(std::vector<int> _dimentions);
 
-  /// Создать начальную точку решения задач
+  /// Создает начальную точку решения задач
   void CreateStartPoint();
 
-  /// заполняет основные поля класса
+  /// Заполняет основные поля класса
   void Construct();
 
-  /// Добавляет вычесленные точки в общий массив с точками
+  /// Добавляет вычисленные точки в общий массив с точками
   void AddPoint(Solver* solver, int i, std::vector<Trial*>& points, int startParameterNumber);
 
   /// Обновляет стартовую точку
   void UpdateStartPoint(SolutionResult* solution, double& bestValue, int curDimensions,
     int startParameterNumber, std::vector<Trial*>& points, HDTask* curTask);
 
+  /// Загружает точки испытаний из файла
   void LoadPoint();
+
+  /// Подготавливает данные (дерево и очередь интервалов) для поисковой информации
   void CreateData();
 
 public:
-  HDSolver(IProblem* problem, std::vector<int> _dimentions = {});
-
+  HDSolver(IProblem* problem, int discreteParamsNum = 0, std::vector<int> _dimentions = {});
 #ifdef _GLOBALIZER_BENCHMARKS
-
   HDSolver(IGlobalOptimizationProblem* problem, std::vector<int> _dimentions = {});
-
 #endif
 
   virtual ~HDSolver();
@@ -72,12 +81,15 @@ public:
   /// Решение задачи по умолчанию
   virtual int Solve();
 
-
-
+  /// Возвращает полученное решение
   SolutionResult* GetSolutionResult();
 
   /// Добавляет точки испытаний
   virtual void SetPoint(std::vector<Trial*>& points);
-  /// Возврящает все имеющиеся точки испытаний
+
+  /// Возвращает все имеющиеся точки испытаний
   virtual std::vector<Trial*>& GetAllPoint();
+
+  /// Выполняет автоматическую настройку параметров решателя
+  virtual void AutoConfig();
 };

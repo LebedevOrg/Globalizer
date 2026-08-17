@@ -23,14 +23,18 @@
 #include "Parameters.h"
 #include "Performance.h"
 #include "ProblemInterface.h"
-#include "Evolvent.h"
+#include "EvolventInterface.h"
+
 #include "CalculationFactory.h"
 
-//extern const int MaxNumOfTaskLevels;
+class Solver;
+
 
 // ------------------------------------------------------------------------------------------------
 class Process
 {
+  friend class Solver;
+
 protected:
   /// Печатать ли выходную информацию
   bool isPrintOptimEstimation;
@@ -58,7 +62,7 @@ protected:
   - множественная сдвиговая развертка
   - множественная вращаемая развертка
   */
-  Evolvent* evolvent;
+  IEvolvent* pEvolvent;
   /// Вычислитель
   Calculation* calculation;
 

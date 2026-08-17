@@ -26,6 +26,8 @@ protected:
   /// Номера значений дискретных параметров
   std::vector <std::vector<double>> discreteValues;
 
+public:
+
   /** Метод, получает по координатам непрерывных параметров и номерам дискретных два вектора с непрерывными и дискретными параметрами соответственно
 
   \param[in] x координаты точки, сначала непрерывные координаты, затем номера дискретных параметров
@@ -42,7 +44,7 @@ protected:
   */
   void YUtoX(std::vector<double>& y, std::vector<std::string>& u, double* x) const;
 
-public:
+
   GlobalizerBenchmarksProblem(IGlobalOptimizationProblem* _problem);
 
   /** Метод возвращает значение целевой функции в точке глобального минимума
@@ -109,6 +111,11 @@ public:
   virtual int GetAllDiscreteValues(int discreteVariable, double* values);
 
   /**
+  Возвращает значения дискретных параметров
+*/
+  virtual std::vector< std::vector<std::string>> GetDiscretesValues();
+
+  /**
   Определяет значения дискретного параметра с номером discreteVariable после номера previousNumber
   Возвращает код ошибки.
   \param[in] previousNumber - номер значения после которого возвращается значение
@@ -118,5 +125,4 @@ public:
   */
   virtual int GetNextDiscreteValues(int* mCurrentDiscreteValueIndex, double& value, int discreteVariable, int previousNumber = -2);
 };
-
 #endif

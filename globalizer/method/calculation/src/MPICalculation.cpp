@@ -35,8 +35,8 @@ void MPICalculation::StartCalculate(InformationForCalculation& inputSet,
         MPI_Send(&isFinish, 1, MPI_INT, i + 1, TagChildSolved, MPI_COMM_WORLD);
 
         // Отправляем блок точек на каждый процесс
-        for (unsigned int j = 0; j < parameters.mpiBlockSize; j++) {
-            Trial* trail = inputSet.trials[i * (parameters.mpiBlockSize) + j];
+        for (unsigned int j = 0; j < parameters.MpiBlockSize; j++) {
+            Trial* trail = inputSet.trials[i * (parameters.MpiBlockSize) + j];
             trail->index = -1;
             // Отправляем координаты y
             MPI_Send(trail->y, parameters.Dimension, MPI_DOUBLE, i + 1, TagChildSolved, MPI_COMM_WORLD);
@@ -48,8 +48,8 @@ void MPICalculation::StartCalculate(InformationForCalculation& inputSet,
     for (unsigned int i = 0; i < parameters.GetProcNum() - 1; i++)
     {
         // Принимаем все отправленные точки обратно
-        for (unsigned int j = 0; j < parameters.mpiBlockSize; j++) {
-            Trial* trail = inputSet.trials[i * (parameters.mpiBlockSize) + j];
+        for (unsigned int j = 0; j < parameters.MpiBlockSize; j++) {
+            Trial* trail = inputSet.trials[i * (parameters.MpiBlockSize) + j];
             trail->index = -1;
 
             // Принимаем вычисленное значение функции
@@ -116,7 +116,7 @@ void MPICalculation::Calculate(InformationForCalculation& inputSet,
 
     if (isStartComputingAway)
     {
-        if ((isFirst) && ((parameters.isCalculationInBorderPoint == true) || (parameters.LocalTuningType != 0)))
+        if ((isFirst) && ((parameters.IsCalculationInBorderPoint == true) || (parameters.LocalTuningType != 0)))
         {
             isFirst = false;
             StartCalculateInBorder(inputSet, outputSet);

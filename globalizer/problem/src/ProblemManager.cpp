@@ -31,19 +31,19 @@ ProblemManager::~ProblemManager()
 }
 
 // ------------------------------------------------------------------------------------------------
-int ProblemManager::LoadProblemLibrary(const std::string& libPath)
+int ProblemManager::LoadProblemLibrary(const std::string& LibPath)
 {
   if (mLibHandle)
     FreeProblemLibrary();
   #ifdef WIN32
-    mLibHandle = LoadLibrary(TEXT(libPath.c_str()));
+    mLibHandle = LoadLibrary(TEXT(LibPath.c_str()));
     if (!mLibHandle)
     {
-        std::cerr << "Cannot load library: " << TEXT(libPath.c_str()) << std::endl;
+        std::cerr << "Cannot load library: " << TEXT(LibPath.c_str()) << std::endl;
         return ProblemManager::ERROR_;
     }
   #else
-    mLibHandle = dlopen(libPath.c_str(), RTLD_LAZY);
+    mLibHandle = dlopen(LibPath.c_str(), RTLD_LAZY);
     if (!mLibHandle)
     {
         std::cerr << dlerror() << std::endl;

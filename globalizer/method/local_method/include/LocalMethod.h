@@ -55,7 +55,7 @@ protected:
 
 public:
 
-  LocalMethod(Task* _pTask, Trial _startPoint, int logPoints = 0);
+  LocalMethod(Task* _pTask, Trial _StartPoint, int logPoints = 0);
   LocalMethod(LocalMethod&) { throw EXCEPTION("Copy constructor is not implemented"); }
   virtual ~LocalMethod();
 

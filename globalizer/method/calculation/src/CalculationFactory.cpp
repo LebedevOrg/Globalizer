@@ -22,7 +22,7 @@
 
 
 // ------------------------------------------------------------------------------------------------
-Calculation* CalculationFactory::CreateCalculation2(Task& _pTask, Evolvent* evolvent)
+Calculation* CalculationFactory::CreateCalculation2(Task& _pTask, IEvolvent* evolvent)
 {
     Calculation* calculation = 0;
 
@@ -81,11 +81,11 @@ Calculation* CalculationFactory::CreateCalculation2(Task& _pTask, Evolvent* evol
         {
             if (Calculation::leafCalculation == 0)
             {
-                if (parameters.calculationsArray.GetSize() < _pTask.GetProcLevel())
+                if (parameters.CalculationsArray.GetSize() < _pTask.GetProcLevel())
                     calculation = new CUDACalculation(_pTask);
                 else
                 {
-                    if (parameters.calculationsArray[_pTask.GetProcLevel()] == OMP)
+                    if (parameters.CalculationsArray[_pTask.GetProcLevel()] == OMP)
                         calculation = new OMPCalculation(_pTask);
                     else
                         calculation = new CUDACalculation(_pTask);
@@ -111,7 +111,7 @@ Calculation* CalculationFactory::CreateCalculation2(Task& _pTask, Evolvent* evol
 
 
 // ------------------------------------------------------------------------------------------------
-Calculation* CalculationFactory::CreateCalculation(Task& _pTask, Evolvent* evolvent)
+Calculation* CalculationFactory::CreateCalculation(Task& _pTask, IEvolvent* evolvent)
 {
     Calculation* calculation = 0;
 
@@ -170,11 +170,11 @@ Calculation* CalculationFactory::CreateCalculation(Task& _pTask, Evolvent* evolv
         {
             if (Calculation::leafCalculation == 0)
             {
-                if (parameters.calculationsArray.GetSize() < _pTask.GetProcLevel())
+                if (parameters.CalculationsArray.GetSize() < _pTask.GetProcLevel())
                     calculation = new CUDACalculation(_pTask);
                 else
                 {
-                    if (parameters.calculationsArray[_pTask.GetProcLevel()] == OMP)
+                    if (parameters.CalculationsArray[_pTask.GetProcLevel()] == OMP)
                         calculation = new OMPCalculation(_pTask);
                     else
                         calculation = new CUDACalculation(_pTask);
@@ -191,7 +191,7 @@ Calculation* CalculationFactory::CreateCalculation(Task& _pTask, Evolvent* evolv
     return calculation;
 }
 
-Calculation* CalculationFactory::CreateNewCalculation(Task& _pTask, Evolvent* evolvent)
+Calculation* CalculationFactory::CreateNewCalculation(Task& _pTask, IEvolvent* evolvent)
 {
     Calculation* calculation = 0;
 
@@ -215,11 +215,11 @@ Calculation* CalculationFactory::CreateNewCalculation(Task& _pTask, Evolvent* ev
         }
         else
         {
-            if (parameters.calculationsArray.GetSize() < _pTask.GetProcLevel())
+            if (parameters.CalculationsArray.GetSize() < _pTask.GetProcLevel())
                 calculation = new CUDACalculation(_pTask);
             else
             {
-                if (parameters.calculationsArray[_pTask.GetProcLevel()] == OMP)
+                if (parameters.CalculationsArray[_pTask.GetProcLevel()] == OMP)
                     calculation = new OMPCalculation(_pTask);
                 else
                     calculation = new CUDACalculation(_pTask);

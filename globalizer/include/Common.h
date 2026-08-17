@@ -164,7 +164,17 @@ enum ETypeSolver
 enum EMapType
 {
   ///Базовый, одиночный вариант
-  mpBase
+  mpBase,
+
+  mpLinar,
+
+  mpNoninjective,
+
+  mpRotated,
+
+  mpShifted,
+
+  mpSmooth
 };
 
 ///Тип распределения начальных точек

@@ -39,11 +39,11 @@ class CombinableBaseParameters
 {
 protected:
   /// Количество арументов командной строки
-  int mArgumentCount;
+  int mArgumentCount = 0;
   /// Сами аргументы командной строки
-  char** mAargumentValue;
+  char** mAargumentValue = nullptr;
   /// Был ли инициализирован MPI
-  bool mIsMPIInit;
+  bool mIsMPIInit = false;
 public:
 
   /**
@@ -84,6 +84,11 @@ public:
   /// Инициализировать данные задачи по параметрам системы
   virtual void InitDataByParameters()
   {};
+
+  virtual bool IsMPIInit()
+  {
+    return mIsMPIInit;
+  }
 };
 
 #endif //__COMBINABLE_BASE_PARAMETERS_H__

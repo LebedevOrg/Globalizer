@@ -23,7 +23,7 @@ void GlobalizerInitialization(int argc, char* argv[], bool isMPIInit,
   parameters.Init(argc, argv, isMPIInit);
 
   if (mLogFileName == "")
-    mLogFileName = parameters.logFileNamePrefix;
+    mLogFileName = parameters.LogFileNamePrefix;
 
   if (processCount == -1)
     processCount = parameters.GetProcNum();
@@ -45,7 +45,7 @@ void GlobalizerInitialization(int argc, char* argv[], bool isMPIInit,
 
   if (isPrintParameters)
   {
-    if (parameters.GetProcRank() == 0 && !parameters.disablePrintParameters)
+    if (parameters.GetProcRank() == 0 && !parameters.DisablePrintParameters)
     {
       parameters.PrintParameters();
 
@@ -84,7 +84,7 @@ SolutionResult* GlobalizerSolveProblem(IProblem*& problem)
 {
   ISolver* solver;
 
-  parameters.automaticParametersSetting = true;
+  parameters.AutomaticParametersSetting = true;
 
   if (parameters.MaxNumOfPoints > 100
     && parameters.NumThread.GetIsChange() == false && parameters.NumPoints.GetIsChange() == false
@@ -94,25 +94,26 @@ SolutionResult* GlobalizerSolveProblem(IProblem*& problem)
     parameters.NumPoints = parameters.NumThread;
   }
 
-  int iterationByDimention = parameters.iterationsCount / parameters.Dimension;
-  if (!IsBelowGraph(parameters.Dimension, parameters.iterationsCount))
+  int iterationByDimention = parameters.IterationsCount / parameters.Dimension;
+  if (!IsBelowGraph(parameters.Dimension, parameters.IterationsCount))
   {
-    if (parameters.iterationsCount.GetIsChange() || !(parameters.MaxNumOfPoints.GetIsChange()))
-      parameters.MaxNumOfPoints = parameters.iterationsCount;
+    if (parameters.IterationsCount.GetIsChange() || !(parameters.MaxNumOfPoints.GetIsChange()))
+      parameters.MaxNumOfPoints = parameters.IterationsCount;
 
     solver = new Solver(problem);
   }
   else
   {
     int C = parameters.Dimension;
-    int z = parameters.iterationsCount;
+    int z = parameters.IterationsCount;
     int y = parameters.HDSolverIterationCount;
     int x = parameters.MaxNumOfPoints;
     FindXY(x, y, z, C);
     parameters.HDSolverIterationCount = y;
-    parameters.MaxNumOfPoints = x;
+    parameters.MaxNumOfPoints = x + 3;
 
-    parameters.MaxIterationsWithoutImprovement = parameters.iterationsCount / 10;
+    if (!parameters.MaxIterationsWithoutImprovement.GetIsChange())
+      parameters.MaxIterationsWithoutImprovement = parameters.IterationsCount / 10;
 
     // Решатель
     solver = new HDSolver(problem);
@@ -129,4 +130,22 @@ SolutionResult* GlobalizerSolveProblem(IProblem*& problem)
 void CreateCurentProblemsParameters(int argc, char* argv[])
 {
 
+}
+
+// ------------------------------------------------------------------------------------------------
+bool SelectSolver(IProblem* problem)
+{
+  int dim = problem->GetDimension();
+  if (dim == 1 ||
+    dim == 2 && parameters.IterationsCount > 100 ||
+    dim == 3 && parameters.IterationsCount > 300 ||
+    dim == 4 && parameters.IterationsCount > 1000 ||
+    dim == 5 && parameters.IterationsCount > 4000)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }

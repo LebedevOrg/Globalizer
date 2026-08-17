@@ -54,6 +54,20 @@ def parse_args():
         help="The type of value calculations for visualizing the objective function."
     )
     ap.add_argument(
+        "-ctc",
+        "--CalcsTypeC",
+        type=str,
+        default="Interpolation",
+        choices=[
+            "ObjectiveFunction",
+            "Approximation",
+            "Interpolation",
+            "ByPoints",
+            "OnlyPoints"
+        ],
+        help="The type of value calculations for visualizing the objective function."
+    )
+    ap.add_argument(
         "-eps",
         "--Epsilon",
         type=float,
@@ -74,6 +88,31 @@ def parse_args():
         default=1,
         help="Second parameter number for visualization."
     )
+
+    ap.add_argument(
+        "-lvls",
+        "--Levels",
+        type=int,
+        default=25,
+        help="The number of level lines for visualizing in mode LevelLayers."
+    )
+
+    ap.add_argument(
+        "-grido",
+        "--ObjectiveGridSize",
+        type=int,
+        default=100,
+        help="The number of grid points for visualizing the objective function."
+    )
+
+    ap.add_argument(
+        "-gridc",
+        "--ConstraintsGridSize",
+        type=int,
+        default=200,
+        help="The number of grid points for visualizing the constraints."
+    )
+
     ap.add_argument(
         "-b",
         "--Bounds",
@@ -100,6 +139,18 @@ def parse_args():
         "--PointsBelowGraph",
         action="store_true",
         help="A flag indicating the need to shift the trial points in the figure below the graph."
+    )
+    ap.add_argument(
+        "-FillFeasibleRegion",
+        "--FillFeasibleRegion",
+        action="store_true",
+        help="A flag indicating the need to fill feasible region with color."
+    )
+    ap.add_argument(
+        "-1D",
+        "--1D",
+        action="store_true",
+        help="A flag indicating the need to paint 1-D figure by x1."
     )
 
     return ap
@@ -137,13 +188,25 @@ def read_args():
         obj_func_type = str(args["CalcsType"])
         obj_func_type = types_names_map.get(obj_func_type)
 
-        params = list({int(args["x1"]), int(args["x2"])})
+        levels = int(args["Levels"])
+
+        grid_obj = int(args["ObjectiveGridSize"])
+        grid_c = int(args["ConstraintsGridSize"])
 
         bounds = str(args["Bounds"])
 
         displacement_of_points = bool(args["PointsBelowGraph"])
         figure_show = bool(args["ShowFigure"])
         hide_trials_points = bool(args["HideTrialsPoints"])
+        fill_feasible_region = bool(args["FillFeasibleRegion"])
+
+        is_1D = bool(args["1D"])
+
+        if is_1D:
+            params = list({int(args["x1"])})
+        else:
+            params = list({int(args["x1"]), int(args["x2"])})
+
 
     return (
         path,
@@ -154,16 +217,20 @@ def read_args():
         plot_type,
         obj_func_type,
         params,
+        levels,
+        grid_obj,
+        grid_c,
         displacement_of_points,
         figure_show,
         hide_trials_points,
+        fill_feasible_region,
         bounds
     )
 
 if __name__ == "__main__":
     (path, trials_file_name, problem_file_name, output_file_name,
-     eps, plot_type, obj_func_type, params,
-     displacement_of_points, figure_show, hide_trials_points, bounds) = read_args()
+     eps, plot_type, obj_func_type, params, levels, grid_obj, grid_c,
+     displacement_of_points, figure_show, hide_trials_points, fill_feasible_region, bounds) = read_args()
 
     print(f"""
     Plotter startup parameters:
@@ -173,36 +240,50 @@ if __name__ == "__main__":
     OutputFileName: {output_file_name}
     Eps: {eps}
     PlotType: {plot_type}
+    Levels: {levels}
+    ObjectiveGridSize: {grid_obj}
+    ConstraintsGridSize: {grid_c}
     ObjFuncType: {obj_func_type}
     Params: {params}
     DisplacementOfPoints: {displacement_of_points}
     FigureShow: {figure_show}
     HideTrialsPoints: {hide_trials_points}
+    FillFeasibleRegion: {fill_feasible_region}
     Bounds: {bounds}
     """)
 
     filename = path + problem_file_name
 
-    old_problem_init_info = ""
-    with open(filename, "r") as file:
-        old_problem_init_info = file.readline()
+    if bounds:
+        lines = ""
+        with open(filename, "r") as file:
+            lines = file.readlines()
 
-    new_problem_init_info = old_problem_init_info.split(' ')[0] + ' ' + bounds
-    with open(filename, "w") as file:
-        file.write(new_problem_init_info)
+        old_problem_init_info = lines[0]
+        new_problem_init_info = old_problem_init_info.split(' ')[0] + ' ' + bounds + '\n'
+
+        lines[0] = new_problem_init_info
+        with open(filename, "w") as file:
+            file.writelines(lines)
 
     dp = DrawingProcess(path, trials_file_name, problem_file_name, eps)
 
-    with open(filename, "w") as file:
-        file.write(old_problem_init_info)
+    if bounds:
+        lines[0] = old_problem_init_info
+        with open(filename, "w") as file:
+            file.writelines(lines)
 
     dp.draw_plot(plotter_type=plot_type,
                  object_function_plotter_type=obj_func_type,
                  parameters_numbers=params,
                  is_points_at_bottom=displacement_of_points,
                  output_file=output_file_name,
+                 levels=levels,
+                 grid_obj=grid_obj,
+                 grid_c=grid_c,
                  is_need_show_figure=figure_show,
-                 is_need_hide_trials_points=hide_trials_points
+                 is_need_hide_trials_points=hide_trials_points,
+                 is_need_fill_feasible_region=fill_feasible_region
                  )
     
     print(f"Picture was saved in {path + output_file_name}.")

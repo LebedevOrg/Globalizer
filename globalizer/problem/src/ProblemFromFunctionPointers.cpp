@@ -5,6 +5,8 @@ ProblemFromFunctionPointers::ProblemFromFunctionPointers(int dimention, std::vec
   std::vector<std::function<double(const double*)>> function_,
   bool isSetOptimum_, double optimumValue_, std::vector<double> optimumCoordinate_)
 {
+  mIsInit = false;
+
   this->mDim = dimention;
   this->mOwner = this;
   this->mMinDimension = 1;
@@ -31,6 +33,8 @@ ProblemFromFunctionPointers::ProblemFromFunctionPointers(int dimention, std::vec
     }
   }
 
+  BaseProblem<ProblemFromFunctionPointers>::Init(0, 0, false);
+  mIsInit = true;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -38,6 +42,8 @@ ProblemFromFunctionPointers::ProblemFromFunctionPointers(int dimention, std::vec
   std::function<double(const double*, int)> function_, int functionCount_,
   bool isSetOptimum_, double optimumValue_, std::vector<double> optimumCoordinate_)
 {
+  mIsInit = false;
+
   this->mDim = dimention;
   this->mOwner = this;
   this->mMinDimension = 1;
@@ -64,6 +70,8 @@ ProblemFromFunctionPointers::ProblemFromFunctionPointers(int dimention, std::vec
     }
   }
 
+  BaseProblem<ProblemFromFunctionPointers>::Init(0, 0, false);
+  mIsInit = true;
 }
 
 // Новый конструктор для задач с частично целочисленными
@@ -73,6 +81,9 @@ std::vector<int> discreteValues_,
 std::vector<std::function<double(const double*)>> function_,
 bool isSetOptimum_, double optimumValue_, std::vector<double> optimumCoordinate_)
 {
+  mIsInit = false;
+
+
   this->mDim = dimension;
   this->mOwner = this;
   this->mMinDimension = 1;
@@ -87,9 +98,12 @@ bool isSetOptimum_, double optimumValue_, std::vector<double> optimumCoordinate_
   upperBounds = upper_;
   isSetOptimum = isSetOptimum_;
   this->mNumberOfConstraints = function_.size() - this->mNumberOfCriterions;
+  this->mDefNumberOfValues = discreteValues_.empty() ? -1 : discreteValues_[0];
+
+  BaseProblem<ProblemFromFunctionPointers>::Init(0, 0, false);
 
   this->NumberOfDiscreteVariable = numberOfDiscreteVariables_;
-  this->mDefNumberOfValues = discreteValues_.empty() ? -1 : discreteValues_[0];
+
 
   this->CheckValue();
 
@@ -111,15 +125,13 @@ bool isSetOptimum_, double optimumValue_, std::vector<double> optimumCoordinate_
         optimumCoordinate[i] = optimumCoordinate_[i];
     }
   }
+  mIsInit = true;
 }
 
 // ------------------------------------------------------------------------------------------------
 /// Инициализация параметров
 void ProblemFromFunctionPointers::Init(int argc, char* argv[], bool isMPIInit)
 {
-  mIsInit = false;
-  BaseProblem<ProblemFromFunctionPointers>::Init(argc, argv, false);
-
   mIsInit = true;
 }
 
