@@ -746,7 +746,6 @@ void Process::DoIteration()
       pMethod->RenewSearchData();
 
       pMethod->FinalizeIteration();
-
     }
     else
     {

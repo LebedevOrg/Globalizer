@@ -1,3 +1,4 @@
-1. Активируем окружение: conda activate "D:\Globalizer\fork\Globalizer\build_64\Globalizer_env" - нужно прописать
-свой путь (потом поправлю)
-2. Запускаем :)
+Для запуска задач с использованием интерфейса для Python нужно сделать следующее:
+1. В корне проекта (папка Globalizer) нужно ввести команду: conda activate .\build_64\Globalizer_env
+2. После этого запускаем нужную нам задачу - например, задачу "SVC_3D_globalizer.py" из папки examples:
+python examples/SVC_3D_globalizer.py

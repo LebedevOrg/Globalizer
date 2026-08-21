@@ -52,6 +52,8 @@ private:
 
   double optimumValue = 0;
   std::vector<double> optimumCoordinate;
+  int numOfSecreteVariables;
+  std::vector<std::string> discreteValues;
 public:
   /// Конструктор - принимает в качестве параметра Python-объект
   PYProblem(py::object data);
@@ -59,4 +61,9 @@ public:
   virtual void GetBounds(double* lower, double* upper);
   /// Вычисление значения функции y с номером fNumber из вектора функций
   virtual double CalculateFunctionals(const double* y, int fNumber);
+  virtual int GetNumberOfDiscreteVariable();
+  virtual int GetNumberOfValues(int discreteVariable);
+  virtual int GetAllDiscreteValues(int discreteVariable, double* values);
+  virtual int GetNextDiscreteValues(int* mCurrentDiscreteValueIndex, double& value, int discreteVariable, int previousNumber = -2);
+  virtual bool IsPermissibleValue(double value, int discreteVariable);
 };

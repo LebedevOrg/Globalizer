@@ -378,7 +378,7 @@ if(PYGlobalizer)
 	set(PYBIND11_FINDPYTHON ON)
 	find_package(pybind11 CONFIG REQUIRED)
 
-	pybind11_add_module(PYGlobalizer ${PROJECT_SOURCE_DIR}/PYGlobalizer/PYGlobalizer.cpp ${PROJECT_SOURCE_DIR}/PYGlobalizer/PYProblem.cpp)
+	pybind11_add_module(PYGlobalizer ${PROJECT_SOURCE_DIR}/PYGlobalizer/PYGlobalizer.cpp ${PROJECT_SOURCE_DIR}/PYGlobalizer/PYProblem.cpp ${PROJECT_SOURCE_DIR}/PYGlobalizer/IOptProblem.cpp)
 
 	# Добавляем библиотеки с использованием keyword-синтаксиса
 	target_link_libraries(PYGlobalizer 

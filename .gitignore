@@ -80,3 +80,7 @@ ipch/
 *.cachefile
 *.VC.db
 /.vs/
+
+# PYGlobalizer specific
+*.pyd
+*.pyc
