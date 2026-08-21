@@ -42,6 +42,9 @@ set(GLOBALIZER_LIB_NAME_DEBUG                  ${GLOBALIZER_EXECUTABLE_NAME}_l_$
 set(CMAKE_CXX_STANDARD 17)
 project(${GLOBALIZER_PROJECT_NAME})
 
+option(GLOBALIZER_BUILD_AS_LIBRARY_ONLY "Собрать только библиотеку (пропустить примеры/.exe)" OFF)
+option(BUILD_SHARED_LIBS "Собрать динамическую библиотеку (DLL/.so) вместо статической (.lib/.a)" OFF)
+
 set(GLOBALIZER_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/_bin CACHE STRING "Output directory")
 
 message("GLOBALIZER_OUTPUT_DIRECTORY" ${GLOBALIZER_OUTPUT_DIRECTORY})
@@ -305,72 +308,87 @@ else()
   
 endif()
 
-add_library(${GLOBALIZER_LIB_NAME} STATIC ${ALL_SRC_FILES} ${GCGEN_SOURCES} ${GCGEN_HEADERS})
+set(_glib_type STATIC)
+if(BUILD_SHARED_LIBS)
+  set(_glib_type SHARED)
+endif()
+
+add_library(${GLOBALIZER_LIB_NAME} ${_glib_type} ${ALL_SRC_FILES} ${GCGEN_SOURCES} ${GCGEN_HEADERS})
+
+if(BUILD_SHARED_LIBS)
+  target_compile_definitions(${GLOBALIZER_LIB_NAME} PRIVATE GLOBALIZER_EXPORTS)
+  if(NOT MSVC)
+    target_compile_options(${GLOBALIZER_LIB_NAME} PRIVATE -fvisibility=hidden)
+  endif()
+else()
+  target_compile_definitions(${GLOBALIZER_LIB_NAME} PUBLIC GLOBALIZER_STATIC)
+endif()
 
 
 target_include_directories(${GLOBALIZER_LIB_NAME} PUBLIC
-    ${GLOBALIZER_COMMON_SRC_DIR}/include
-    ${GLOBALIZER_PARAMETERS_DIR}/include
-    ${GLOBALIZER_evolvent_DIR}/include
-    ${GLOBALIZER_extended_DIR}/include
-    ${GLOBALIZER_output_system_DIR}/include
-    ${GLOBALIZER_problem_DIR}/include
-    ${GLOBALIZER_method_DIR}/include
-    ${GLOBALIZER_calculation_DIR}/include
-    ${GLOBALIZER_local_method_DIR}/include
-	${GLOBALIZER_BENCHMARKS_Interface}/include/
+    $<BUILD_INTERFACE:${GLOBALIZER_COMMON_SRC_DIR}/include>
+    $<BUILD_INTERFACE:${GLOBALIZER_PARAMETERS_DIR}/include>
+    $<BUILD_INTERFACE:${GLOBALIZER_evolvent_DIR}/include>
+    $<BUILD_INTERFACE:${GLOBALIZER_extended_DIR}/include>
+    $<BUILD_INTERFACE:${GLOBALIZER_output_system_DIR}/include>
+    $<BUILD_INTERFACE:${GLOBALIZER_problem_DIR}/include>
+    $<BUILD_INTERFACE:${GLOBALIZER_method_DIR}/include>
+    $<BUILD_INTERFACE:${GLOBALIZER_calculation_DIR}/include>
+    $<BUILD_INTERFACE:${GLOBALIZER_local_method_DIR}/include>
+    $<BUILD_INTERFACE:${GLOBALIZER_BENCHMARKS_Interface}/include/>
+    
+    $<INSTALL_INTERFACE:include>
 )
 
-file(GLOB main_list "${GLOBALIZER_EXAMPLES_SRC_DIR}/*.cpp")
 
+if(NOT GLOBALIZER_BUILD_AS_LIBRARY_ONLY)
+  file(GLOB main_list "${GLOBALIZER_EXAMPLES_SRC_DIR}/*.cpp")
 
-
-foreach(main_filename ${main_list})
-  # Get file name without extension
-  get_filename_component(sample ${main_filename} NAME_WE)
+  foreach(main_filename ${main_list})
+    get_filename_component(sample ${main_filename} NAME_WE)
   
-  if(GLOBALIZER_BUILD_PROBLEMS OR  (sample STREQUAL "SimpleMain"))  
-    set(GLOBALIZER_EXECUTABLE_NAME                 ${GLOBALIZER_PROJECT_NAME}${sample}${GLOBALIZER_EXECUTABLE_SUFFIX})
-    set(GLOBALIZER_EXECUTABLE_NAME_DEBUG           ${GLOBALIZER_EXECUTABLE_NAME}_${GLOBALIZER_DEBUG_SUFFIX})
-    set(GLOBALIZER_EXECUTABLE_NAME_RELEASE         ${GLOBALIZER_EXECUTABLE_NAME})
+    if(GLOBALIZER_BUILD_PROBLEMS OR (sample STREQUAL "SimpleMain"))  
+      set(GLOBALIZER_EXECUTABLE_NAME                 ${GLOBALIZER_PROJECT_NAME}${sample}${GLOBALIZER_EXECUTABLE_SUFFIX})
+      set(GLOBALIZER_EXECUTABLE_NAME_DEBUG           ${GLOBALIZER_EXECUTABLE_NAME}_${GLOBALIZER_DEBUG_SUFFIX})
+      set(GLOBALIZER_EXECUTABLE_NAME_RELEASE         ${GLOBALIZER_EXECUTABLE_NAME})
     
-    message("Name: " ${GLOBALIZER_EXECUTABLE_NAME})
+      message("Name: " ${GLOBALIZER_EXECUTABLE_NAME})
     
-    # Add and configure executable file to be produced
-    add_executable(${GLOBALIZER_EXECUTABLE_NAME} ${main_filename})
+      add_executable(${GLOBALIZER_EXECUTABLE_NAME} ${main_filename})
 	
-    # --- порядок сборки: main зависит от MP-библиотек (см. блок для Globalizer_l) ---
-    if (${GLOBALIZER_USE_MP})
-      foreach(_mp_target libgmp mpir mpfr)
-        if (TARGET ${_mp_target})
-          add_dependencies(${GLOBALIZER_EXECUTABLE_NAME} ${_mp_target})
-        endif()
-      endforeach()
-    endif()
+      if (${GLOBALIZER_USE_MP})
+        foreach(_mp_target libgmp mpir mpfr)
+          if (TARGET ${_mp_target})
+            add_dependencies(${GLOBALIZER_EXECUTABLE_NAME} ${_mp_target})
+          endif()
+        endforeach()
+      endif()
     
-    target_include_directories(${GLOBALIZER_EXECUTABLE_NAME} PRIVATE ${GLOBALIZER_COMMON_SRC_DIR}
-	  											  PRIVATE ${Python_INCLUDE_DIRS} 
-	  											  PRIVATE ${Python_NumPy_INCLUDE_DIRS})												  
-    	
-    if (${IS_CLANG_COMPILER})	
-      target_link_libraries(${GLOBALIZER_EXECUTABLE_NAME} ${GLOBALIZER_LIB_NAME} ${Python_LIBRARIES} OpenMP::OpenMP_CXX  )
-    elseif (${IS_MICROSOFT_COMPILER})
-	  target_link_libraries(${GLOBALIZER_EXECUTABLE_NAME} ${GLOBALIZER_LIB_NAME} ${Python_LIBRARIES}) 
-	else()
-      target_link_libraries(${GLOBALIZER_EXECUTABLE_NAME} ${GLOBALIZER_LIB_NAME} ${Python_LIBRARIES} stdc++fs)  
-    endif()
+      target_include_directories(${GLOBALIZER_EXECUTABLE_NAME} PRIVATE 
+          ${GLOBALIZER_COMMON_SRC_DIR}
+          ${Python_INCLUDE_DIRS} 
+          ${Python_NumPy_INCLUDE_DIRS}
+      )
+     		
+      if (${IS_CLANG_COMPILER})	
+        target_link_libraries(${GLOBALIZER_EXECUTABLE_NAME} ${GLOBALIZER_LIB_NAME} ${Python_LIBRARIES} OpenMP::OpenMP_CXX)
+      elseif (${IS_MICROSOFT_COMPILER})
+        target_link_libraries(${GLOBALIZER_EXECUTABLE_NAME} ${GLOBALIZER_LIB_NAME} ${Python_LIBRARIES}) 
+      else()
+        target_link_libraries(${GLOBALIZER_EXECUTABLE_NAME} ${GLOBALIZER_LIB_NAME} ${Python_LIBRARIES} stdc++fs)  
+      endif()
     
-    set_target_properties(${GLOBALIZER_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME_DEBUG ${GLOBALIZER_EXECUTABLE_NAME_DEBUG})
-    set_target_properties(${GLOBALIZER_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME_RELEASE ${GLOBALIZER_EXECUTABLE_NAME_RELEASE})
+      set_target_properties(${GLOBALIZER_EXECUTABLE_NAME} PROPERTIES 
+          OUTPUT_NAME_DEBUG ${GLOBALIZER_EXECUTABLE_NAME_DEBUG}
+          OUTPUT_NAME_RELEASE ${GLOBALIZER_EXECUTABLE_NAME_RELEASE}
+      )
     
-    if (IS_GNU_COMPILER)
-      set_target_properties(${GLOBALIZER_EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-Wl,--no-as-needed -ldl -fopenmp")
-
+      if (IS_GNU_COMPILER)
+        set_target_properties(${GLOBALIZER_EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-Wl,--no-as-needed -ldl -fopenmp")
+      endif()
     endif()
-  endif()
-
-
-endforeach()
+  endforeach()
+endif() 
 
 if(PYGlobalizer)
 	find_package(Python 3.11 REQUIRED COMPONENTS Interpreter Development)
@@ -402,7 +420,7 @@ include_directories(${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 	
 if (${IS_CLANG_COMPILER})	
-  target_link_libraries(${GLOBALIZER_LIB_NAME}
+  target_link_libraries(${GLOBALIZER_LIB_NAME} PRIVATE
     ${GLOBALIZER_MPI_LIB}
     ${GLOBALIZER_MPFR_LIB}
 	${GLOBALIZER_GMP_LIB}
@@ -410,7 +428,7 @@ if (${IS_CLANG_COMPILER})
     ${DISLIN_LIB}
 	OpenMP::OpenMP_CXX  )
 else()
-  target_link_libraries(${GLOBALIZER_LIB_NAME}
+  target_link_libraries(${GLOBALIZER_LIB_NAME} PRIVATE
     ${GLOBALIZER_MPI_LIB}
     ${GLOBALIZER_MPFR_LIB}
 	${GLOBALIZER_GMP_LIB}
@@ -545,3 +563,58 @@ if (IS_MICROSOFT_COMPILER)
   
   
 endif()
+
+
+# === УСТАНОВКА И ЭКСПОРТ ДЛЯ ВНЕШНИХ ПРОЕКТОВ ===
+include(GNUInstallDirs)
+
+install(DIRECTORY
+    ${GLOBALIZER_COMMON_SRC_DIR}/include/
+    ${GLOBALIZER_PARAMETERS_DIR}/include/
+    ${GLOBALIZER_evolvent_DIR}/include/
+    ${GLOBALIZER_extended_DIR}/include/
+    ${GLOBALIZER_output_system_DIR}/include/
+    ${GLOBALIZER_problem_DIR}/include/
+    ${GLOBALIZER_method_DIR}/include/
+    ${GLOBALIZER_calculation_DIR}/include/
+    ${GLOBALIZER_local_method_DIR}/include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
+)
+
+# Если MPI выключен, копируем заглушку mpi.h
+if(NOT GLOBALIZER_USE_MPI)
+    install(DIRECTORY ${PROJECT_SOURCE_DIR}/lib/mpi_stub/include/
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+            FILES_MATCHING PATTERN "*.h")
+endif()
+
+# Если mpi_stub существует, делаем его пути "экспорт-безопасными"
+if(TARGET mpi_stub)
+  set_target_properties(mpi_stub PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES
+    "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/mpi_stub/include>;$<INSTALL_INTERFACE:include>"
+  )
+endif()
+
+install(TARGETS ${GLOBALIZER_LIB_NAME} mpi_stub
+        EXPORT GlobalizerTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+# Если MPI выключен, копируем mpi_stub.lib в SDK
+if(NOT GLOBALIZER_USE_MPI AND TARGET mpi_stub)
+    install(TARGETS mpi_stub
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
+
+install(EXPORT GlobalizerTargets
+        FILE GlobalizerConfig.cmake
+        NAMESPACE Globalizer::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Globalizer)
+
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/GlobalizerConfig.cmake"
+     "include(\"\${CMAKE_CURRENT_LIST_DIR}/GlobalizerConfig.cmake\")\n")
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/GlobalizerConfig.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Globalizer)

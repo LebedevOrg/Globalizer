@@ -4,7 +4,7 @@
 
 /** Класс задач принимающий функции как параметры
 */
-class ProblemFromFunctionPointers : public Problem<ProblemFromFunctionPointers>
+class GLOBALIZER_API ProblemFromFunctionPointers : public Problem<ProblemFromFunctionPointers>
 {
 #undef OWNER_NAME
 #define OWNER_NAME ProblemFromFunctionPointers

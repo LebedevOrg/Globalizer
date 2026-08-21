@@ -33,6 +33,7 @@
 #include "Common.h"
 
 #include "BaseParameters.h"
+#include "GlobalizerAPI.h"
 
 #include <string>
 #include <stdio.h>
@@ -41,7 +42,7 @@ class SearchDataSerializer;
 
 
 /// Параметры системы оптимизации
-class Parameters : public BaseParameters<Parameters>
+class GLOBALIZER_API Parameters : public BaseParameters<Parameters>
 {
 #undef OWNER_NAME
 #define OWNER_NAME Parameters
@@ -366,7 +367,7 @@ public:
 
 };
 
-extern Parameters parameters;
+extern GLOBALIZER_API Parameters parameters;
 
 #endif
 // - end of file ----------------------------------------------------------------------------------

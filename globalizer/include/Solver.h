@@ -17,6 +17,7 @@
 #include "SolutionResult.h"
 #include "SolverInterface.h"
 #include "GlobalizerBenchmarksProblem.h"
+#include "GlobalizerAPI.h"
 
 #ifdef _GLOBALIZER_BENCHMARKS
 #include "IGlobalOptimizationProblem.h"
@@ -28,7 +29,7 @@
  Базовые классы для решения задач глобальной оптимизации
 **/
 
-class Solver : public ISolver
+class GLOBALIZER_API Solver : public ISolver
 {
 protected:
   ///Процесс решающий задачу

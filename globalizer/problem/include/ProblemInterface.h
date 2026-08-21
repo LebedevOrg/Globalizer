@@ -33,12 +33,14 @@
 #include <string>
 #include <stdexcept>
 
+#include "GlobalizerAPI.h"
+
 /**
 Базовый класс-интерфейс, от которого наследуются классы, описывающие задачи оптимизации.
 
 В классе #TIProblem описаны прототипы методов, которые должны быть реализованы в подключамых модулях с задачами.
 */
-class IProblem
+class GLOBALIZER_API IProblem
 {
 public:
 
