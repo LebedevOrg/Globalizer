@@ -24,7 +24,7 @@ option(GLOBALIZER_BUILD_INTEGRATION_TESTS "Set ON to build integration tests" OF
 
 option(GLOBALIZER_ONE_MPI_PROCESS_PER_NODE "ONE PROCESS PER NODE" OFF)
 option(GLOBALIZER_PYTHON "Set ON to use Python" OFF)
-option(PYGlobalizer "Set ON to use Python interface" OFF)
+option(GLOBALIZER_PYBIND_VERSION "Set ON to use Python interface" OFF)
 
 option(GLOBALIZER_USE_ASAN "Set ON to build with AddressSanitizer (diagnostics)" OFF)
 
@@ -36,7 +36,7 @@ set(GLOBALIZER_EXECUTABLE_NAME_RELEASE         ${GLOBALIZER_EXECUTABLE_NAME})
 set(GLOBALIZER_LIB_NAME                        ${GLOBALIZER_EXECUTABLE_NAME}_l)
 set(GLOBALIZER_LIB_NAME_RELEASE                ${GLOBALIZER_EXECUTABLE_NAME}_l)
 set(GLOBALIZER_LIB_NAME_DEBUG                  ${GLOBALIZER_EXECUTABLE_NAME}_l_${GLOBALIZER_DEBUG_SUFFIX})
-
+set(GLOBALIZER_PYD_NAME PYDGlobalizer)
 
 
 set(CMAKE_CXX_STANDARD 17)
@@ -279,33 +279,19 @@ ${GLOBALIZER_BENCHMARKS_Interface_SOURCES}
 )
 list(REMOVE_ITEM ALL_SRC_FILES ${GLOBALIZER_COMMON_SRC_DIR}/Main.cpp)
 
-if (${GLOBALIZER_PYTHON})
+if (GLOBALIZER_PYTHON OR GLOBALIZER_PYBIND_VERSION)
   set(Python_FIND_DEBUG OFF)
-  find_package (Python COMPONENTS Interpreter Development NumPy)
+  find_package(Python REQUIRED COMPONENTS Interpreter Development NumPy)
 
-#set(EXTRA_DEFINES "")
-#if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  #set(EXTRA_DEFINES PYLIBNAME="${Python_LIBRARIES}")
-  message("Python pname ${Python_LIBRARIES}")
-  message("Python end")
-  #message(${PYLIBNAME})
+  message(STATUS "Python executable: ${Python_EXECUTABLE}")
+  message(STATUS "Python includes: ${Python_INCLUDE_DIRS}")
+
   add_definitions(-DUSE_PYTHON)
-#endif()
-
-  if (Python_Development_FOUND)
-    message("Python Development FOUND")
-  endif()
-  
-  if (Python_NumPy_FOUND)
-    message("Python NumPy FOUND")
-  endif()
-
 else()
-  message("Python not use")
+  message(STATUS "Python support disabled")
   set(Python_INCLUDE_DIRS "")
   set(Python_NumPy_INCLUDE_DIRS "")
   set(Python_LIBRARIES "")
-  
 endif()
 
 set(_glib_type STATIC)
@@ -390,24 +376,46 @@ if(NOT GLOBALIZER_BUILD_AS_LIBRARY_ONLY)
   endforeach()
 endif() 
 
-if(PYGlobalizer)
-	find_package(Python 3.11 REQUIRED COMPONENTS Interpreter Development)
+if(GLOBALIZER_PYBIND_VERSION)
+    # Поиск Python 3.11+
+    find_package(Python 3.11 REQUIRED COMPONENTS Interpreter Development)
+    
+    # Включить поиск Python для pybind11
+    set(PYBIND11_FINDPYTHON ON)
+    
+    # Поиск pybind11
+    find_package(pybind11 CONFIG REQUIRED)
+    
 
-	set(PYBIND11_FINDPYTHON ON)
-	find_package(pybind11 CONFIG REQUIRED)
+	pybind11_add_module(${GLOBALIZER_PYD_NAME}
+		${PROJECT_SOURCE_DIR}/PYGlobalizer/PYGlobalizer.cpp
+		${PROJECT_SOURCE_DIR}/PYGlobalizer/PYProblem.cpp
+	)
 
-	pybind11_add_module(PYGlobalizer ${PROJECT_SOURCE_DIR}/PYGlobalizer/PYGlobalizer.cpp ${PROJECT_SOURCE_DIR}/PYGlobalizer/PYProblem.cpp ${PROJECT_SOURCE_DIR}/PYGlobalizer/IOptProblem.cpp)
+	target_link_libraries(${GLOBALIZER_PYD_NAME}
+		PRIVATE
+			${GLOBALIZER_LIB_NAME}
+	)
 
-	# Добавляем библиотеки с использованием keyword-синтаксиса
-	target_link_libraries(PYGlobalizer 
-    		PRIVATE
-    		${GLOBALIZER_LIB_NAME}
-    		# ${PROJECT_SOURCE_DIR}/mpi_stub.lib
-    		${PYTHON_LIBRARIES}
-)
+	target_include_directories(${GLOBALIZER_PYD_NAME}
+		PRIVATE
+			${PROJECT_SOURCE_DIR}/globalizer/include
+			${PROJECT_SOURCE_DIR}/globalizer/problem/include
+			${PROJECT_SOURCE_DIR}/globalizer/solver/include
+			${Python_INCLUDE_DIRS}
+	)
 
-install(TARGETS PYGlobalizer DESTINATION .)
+	# The module is copied directly to _bin in both Debug and Release.
+	# Do not copy PYGlobalizer/*.py here: those files are helper modules and
+	# remain in the PYGlobalizer/ source directory under a different import name.
+	set_target_properties(${GLOBALIZER_PYD_NAME} PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY "${GLOBALIZER_OUTPUT_DIRECTORY}"
+		LIBRARY_OUTPUT_DIRECTORY "${GLOBALIZER_OUTPUT_DIRECTORY}"
+	)
+
+	install(TARGETS ${GLOBALIZER_PYD_NAME} DESTINATION .)
 endif()
+
 
 
 #add_executable(${GLOBALIZER_PROJECT_NAME} ${GLOBALIZER_EXAMPLES_SRC_DIR}/Main.cpp)

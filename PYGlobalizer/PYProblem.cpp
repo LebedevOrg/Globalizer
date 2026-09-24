@@ -1,4 +1,5 @@
 ﻿#include "PYProblem.h"
+#include "PYLogger.h"  
 #include <chrono>
 
 /// Реализация конструктора
@@ -21,11 +22,6 @@ PYProblem::PYProblem(py::object data) {
   if (py::hasattr(data, "number_of_discrete_variables")) {
       this->NumberOfDiscreteVariable = data.attr("number_of_discrete_variables").cast<int>();
   }
-
-  //if (py::hasattr(data, "discrete_variable_names")) {
-  //    //get here!!! их пока нет
-  //    this->
-  //}
 
   if (py::hasattr(data, "discrete_variable_values")) {
       py::list discrete_vals = data.attr("discrete_variable_values");
@@ -112,6 +108,40 @@ PYProblem::PYProblem(py::object data) {
   }
 }
 
+// -----------------------------------------------------------------------------
+// Поиск значения в кэше. true — нашли (result заполнен), false — промах.
+// -----------------------------------------------------------------------------
+bool PYProblem::FindInCache(const double* y, int fNumber, double& result) const {
+  CacheKey key;
+  key.fNumber = fNumber;
+  key.point.assign(y, y + this->GetDimension());   // копия координат
+
+  std::lock_guard<std::mutex> lock(cache_mutex_);
+  auto it = function_cache_.find(key);
+  if (it == function_cache_.end())
+    return false;
+  result = it->second;
+  return true;
+}
+
+
+// -----------------------------------------------------------------------------
+// Добавление значения в кэш. При переполнении просто очищаем целиком —
+// дёшево и предсказуемо для итеративного метода (без LRU-накладных).
+// -----------------------------------------------------------------------------
+void PYProblem::AddToCache(const double* y, int fNumber, double value) const {
+  CacheKey key;
+  key.fNumber = fNumber;
+  key.point.assign(y, y + this->GetDimension());
+
+  std::lock_guard<std::mutex> lock(cache_mutex_);
+  if (function_cache_.size() >= MAX_CACHE_SIZE) {
+    function_cache_.clear();
+    PY_LOG_DEBUG("[PYProblem] cache overflow -> cleared");
+  }
+  function_cache_.emplace(std::move(key), value);
+}
+
 /// Реализация метода получения границ поиска
 void PYProblem::GetBounds(double* lower, double* upper) {
   for (int i = 0; i < Dimension; i++)
@@ -120,43 +150,40 @@ void PYProblem::GetBounds(double* lower, double* upper) {
     upper[i] = upperBounds[i];
   }
 }
-
-/// Реализация метода, вычисляющего значение функции y из вектора функций с номером fNumber
+// =============================================================================
 double PYProblem::CalculateFunctionals(const double* y, int fNumber) {
-  py::gil_scoped_acquire gil;
-  if (fNumber >= functionsOfProblem.size())
+  if (fNumber >= static_cast<int>(functionsOfProblem.size()))
     throw EXCEPTION("Error function number");
 
-  double temp = 0.0;
+  // 1. Кэш — до захвата GIL.
+  double cached = 0.0;
+  if (FindInCache(y, fNumber, cached)) {
+    PY_LOG_DEBUG("[PYProblem] cache hit, f#" << fNumber << " = " << cached);
+    return cached;
+  }
 
-  /// Дополнительная проверка на корректность получения функций
+  // 2. Промах — считаем в Python. GIL нужен только здесь.
+  double temp = 0.0;
   try {
-    /*std::cout << "fNumber: " << fNumber << std::endl;
-    std::cout << "functionsOfProblem.size() = " << functionsOfProblem.size() << std::endl;
-    std::cout << "Calculate in point: " << *y << std::endl;
-    auto start = std::chrono::steady_clock::now();*/
+    py::gil_scoped_acquire gil;
     temp = functionsOfProblem[fNumber](y);
-    /*auto finish = std::chrono::steady_clock::now();
-    auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start);
-    std::cout << "Time took: " << elapsedTime.count() << std::endl;*/
   }
   catch (const py::error_already_set& e) {
-    std::cerr << "PYTHON ERROR: " << e.what() << std::endl;
-    PyErr_Print();
+    PY_LOG_ERROR("PYTHON ERROR: " << e.what());
     throw;
   }
   catch (const std::exception& e) {
-    std::cerr << "C++ EXCEPTION: " << e.what() << std::endl;
+    PY_LOG_ERROR("C++ EXCEPTION: " << e.what());
     throw;
   }
   catch (...) {
-    std::cerr << "UNKNOWN EXCEPTION occurred while calling Python function" << std::endl;
+    PY_LOG_ERROR("UNKNOWN EXCEPTION while calling Python function");
     throw;
   }
 
-  /*std::cout << "CalculateFunctionals() finished" << std::endl;
-  std::cout << "Result = " << temp << std::endl;*/
-
+  // 3. Сохраняем результат.
+  AddToCache(y, fNumber, temp);
+  PY_LOG_DEBUG("[PYProblem] f#" << fNumber << " = " << temp);
   return temp;
 }
 
