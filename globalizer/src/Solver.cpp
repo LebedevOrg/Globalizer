@@ -40,6 +40,16 @@ void Solver::ClearData()
     pData = nullptr;
   }
 
+  // ДОБАВИТЬ: сбросить статическое состояние Calculation,
+  // иначе firstCalculation будет указывать на удалённый Task
+  // при следующем вызове solve().
+  Calculation::firstCalculation = nullptr;
+  Calculation::countCalculation = 0;
+  Calculation::leafCalculation = nullptr;
+  Calculation::firstCalculation = 0;
+  Calculation::isStartComputingAway = true;
+
+
   mProcess = nullptr;
 }
 

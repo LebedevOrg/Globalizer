@@ -257,7 +257,7 @@ py::dict solve(py::object problem, SolverParameters params = SolverParameters())
     GlobalizerInitialization(0, nullptr, false, false);
     apply_parameters(params);
 
-    static thread_local std::unique_ptr<IProblem> problem_ptr;
+    std::unique_ptr<IProblem> problem_ptr;
     problem_ptr = std::make_unique<PYProblem>(problem);
     if (problem_ptr->Initialize() != IProblem::OK)
       throw std::runtime_error("Problem initialization failed");

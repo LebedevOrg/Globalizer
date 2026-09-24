@@ -55,7 +55,9 @@ protected:
     /// Указатель на данные о процессе поиска
     SearchData* pData;
 
-    // Глобальные статические поля для управления сложными режимами вычислений
+public:
+
+  // Глобальные статические поля для управления сложными режимами вычислений
 
     /// Количество вычислений, которые нужно накопить перед запуском
     static int countCalculation;
@@ -65,8 +67,6 @@ protected:
     static InformationForCalculation inputCalculation;
     /// Глобальный буфер для получения результатов
     static TResultForCalculation resultCalculation;
-
-public:
 
     /// Указатель на единственный вычислитель для корневого процесса
     static Calculation* firstCalculation;
