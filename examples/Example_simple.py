@@ -1,43 +1,46 @@
-"""
-Простой пример использования интерфейса для Python - задача Растригина из репозитория https://github.com/OptimLLab/Globalizer_Benchmarks
+"""Простой пример: задача Растригина через Python-интерфейс Globalizer.
+
+Задача Растригина берётся из бенчмарков (iOptProblemSimple) и копируется
+в объект PYProblem через copy_from_problem().
 """
 
 import sys
-import os
 from pathlib import Path
-from math import cos, pi
 
-import numpy as np
-
-# Добавляем пути
-current_dir = Path(__file__).parent.absolute()
+current_dir = Path(__file__).resolve().parent
 root_dir = current_dir.parent
-pyglobalizer_path = root_dir / "PYGlobalizer"
-sys.path.insert(0, str(pyglobalizer_path))
-sys.path.insert(0, str(root_dir))
-sys.path.insert(0, str(root_dir / "_bin"))
-sys.path.insert(0, str(root_dir / "examples"))
+helpers_dir = root_dir / "PYGlobalizer"          # PYProblem.py, trial.py, problem.py
+bin_dir = root_dir / "_bin"                       # PYDGlobalizer*.pyd
+benchmarks_dir = root_dir / "third_party" / "Problems" / "Problems"
 
-# Добавляем путь к задачам
-benchmarks_path = root_dir / "third_party" / "Problems" / "Problems"
-if benchmarks_path.exists():
-    sys.path.insert(0, str(benchmarks_path))
+# PYProblem.py и trial.py — Python-вспомогательные модули.
+sys.path.insert(0, str(helpers_dir))
+# PYDGlobalizer*.pyd — отдельное C++-расширение с другим именем.
+sys.path.insert(0, str(bin_dir))
+if benchmarks_dir.exists():
+    sys.path.insert(0, str(benchmarks_dir))
 
-from trial import Point, FunctionValue
-from problem import Problem
-
-# Импортиурем задачу растригина, а также модуль интерфейса для Python 
 from iOptProblemSimple import rastrigin
-
 from PYProblem import PYProblem
-import PYGlobalizer
+import PYDGlobalizer
 
-# Создаём задачу Растригина
-p = rastrigin.Rastrigin(2)
 
-# Создаём объект-задачу для Globalizer и копируем в него задачу Растригина, созданную выше
-problem = PYProblem()
-problem.copy_from_problem(p)
+def main():
+    source_problem = rastrigin.Rastrigin(2)
 
-# Вызываем решатель
-PYGlobalizer.solve(problem, 50, 5, False, 1)
+    problem = PYProblem()
+    problem.copy_from_problem(source_problem)
+
+    params = PYDGlobalizer.SolverParameters()
+    params.max_iterations = 50
+    params.r = 5.0
+    params.num_threads = 1
+    params.epsilon = 0.01
+
+    result = PYDGlobalizer.solve(problem, params)
+    print("PYDGlobalizer:", PYDGlobalizer.__file__)
+    print("Result:", result)
+
+
+if __name__ == "__main__":
+    main()

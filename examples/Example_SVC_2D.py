@@ -1,66 +1,77 @@
+"""Пример: подбор гиперпараметров SVC (2 параметра) через Globalizer.
+
+ЧТО ИСПРАВЛЕНО ОТНОСИТЕЛЬНО ИСХОДНОГО ФАЙЛА:
+  1) была неопределённая переменная benchmarks_path -> NameError;
+     теперь путь строится явно;
+  2) было `import PYGlobalizer` и позиционный `solve(problem, 50, 5, False, 1)`;
+     модуль переименован в PYDGlobalizer, а позиционная форма вызова
+     перенесена в solve_legacy() (у solve() теперь сигнатура (problem, params)).
+
+ВНЕШНИЕ ЗАВИСИМОСТИ (не входят в поставку Globalizer):
+  - пакет iOptProblem (откуда берётся класс SVC_2D);
+  - scikit-learn (датасет load_breast_cancer).
+Если они не установлены, скрипт напечатает понятную ошибку, а не трейсбек
+в недрах импорта.
+"""
+
 import sys
-import os
 from pathlib import Path
-from math import cos, pi
 
-import numpy as np
+ROOT = Path(__file__).resolve().parent.parent
+BIN_DIR = ROOT / "_bin"
+HELPERS_DIR = ROOT / "PYGlobalizer"
+BENCHMARKS_DIR = ROOT / "third_party" / "Problems" / "Problems"
 
-# Добавляем пути
-current_dir = Path(__file__).parent.absolute()
-root_dir = current_dir.parent
-pyglobalizer_path = root_dir / "PYGlobalizer"
-sys.path.insert(0, str(pyglobalizer_path))
-sys.path.insert(0, str(root_dir))
-sys.path.insert(0, str(root_dir / "_bin"))
-sys.path.insert(0, str(root_dir / "examples"))
+# Каталоги с .pyd и вспомогательными модулями — в начало пути.
+for d in (HELPERS_DIR, BIN_DIR):
+    if d.exists():
+        sys.path.insert(0, str(d))
+if BENCHMARKS_DIR.exists():
+    sys.path.insert(0, str(BENCHMARKS_DIR))
 
-# Добавляем путь к задачам
-if benchmarks_path.exists():
-    sys.path.insert(0, str(benchmarks_path))
+from trial import Point, FunctionValue   # noqa: F401  (нужны для совместимости)
+from problem import Problem              # noqa: F401
 
-from trial import Point, FunctionValue
-from problem import Problem
-
-"""
-from sklearn.svm import SVC
-from sklearn.model_selection import cross_val_score
-from typing import Dict
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-"""
-
-from iOptProblem.MachineLearning.SupportVectorMachines.SVC_2d import SVC_2D
-from sklearn.datasets import load_breast_cancer
-from sklearn.utils import shuffle
-
-# Импортируем модуль интерфейса и модуль для задачи Globalizer
 from PYProblem import PYProblem
-import PYGlobalizer
+import PYDGlobalizer
 
-"""
-Создаём функции для загрузки датасета и создания задачи
-"""
 
 def load_breast_cancer_data():
+    from sklearn.datasets import load_breast_cancer
+    from sklearn.utils import shuffle
+
     dataset = load_breast_cancer()
-    x_raw, y_raw = dataset['data'], dataset['target']
+    x_raw, y_raw = dataset["data"], dataset["target"]
     inputs, outputs = shuffle(x_raw, y_raw ^ 1, random_state=42)
     return inputs, outputs
 
+
 def testSVC2D():
+    try:
+        from iOptProblem.MachineLearning.SupportVectorMachines.SVC_2d import SVC_2D
+    except ImportError as exc:
+        print("[SKIP] Не найден пакет iOptProblem (SVC_2D). Установите его и повторите.")
+        print("       Причина:", exc)
+        return
+
     x, y = load_breast_cancer_data()
-    regularization_value_bound = {'low': 1, 'up': 6}
-    kernel_coefficient_bound = {'low': -7, 'up': -3}
+    regularization_value_bound = {"low": 1, "up": 6}
+    kernel_coefficient_bound = {"low": -7, "up": -3}
 
-    # Создаём задачу
+    # Задача-источник (иностранный интерфейс) и её копия в формат Globalizer.
     p = SVC_2D(x, y, regularization_value_bound, kernel_coefficient_bound)
-
-    # Создаём задачу для Globalizer и копируем в неё созданную выше задачу
     problem = PYProblem()
     problem.copy_from_problem(p)
 
-    # Запуск решателя
-    PYGlobalizer.solve(problem, 50, 5, False, 1)
+    # Позиционная форма — теперь через solve_legacy (solve() принимает params-объект).
+    result = PYDGlobalizer.solve_legacy(problem, 50, 5, False, 1)
+
+    if result.get("success"):
+        print("f* =", result["best_value"])
+        print("x* =", [round(v, 5) for v in result["best_point"]])
+    else:
+        print("Ошибка:", result.get("error"))
+
 
 if __name__ == "__main__":
     testSVC2D()
