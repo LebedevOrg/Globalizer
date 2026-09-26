@@ -30,18 +30,26 @@ PYProblem::PYProblem(py::object data)
   {
     py::list discrete_vals = data.attr("discrete_variable_values");
 
-    for (int i = 0; i < discrete_vals.size(); i++)
+    // ДОБАВИТЬ: инициализация mNumberOfValues
+    if (discrete_vals.size() > 0)
     {
-      py::list val = discrete_vals[i];
+      // Выделяем память под массив
+      mNumberOfValues = new int[discrete_vals.size()];
 
-      for (int j = 0; j < val.size(); j++)
+      // Заполняем количеством значений для каждой дискретной переменной
+      for (int i = 0; i < discrete_vals.size(); i++)
       {
-        std::string value = val[j].cast<std::string>();
-        discreteValues.push_back(value);
+        py::list val = discrete_vals[i];
+        mNumberOfValues[i] = val.size();  // Сохраняем количество значений
+
+        // Сохраняем сами значения (для отладки)
+        for (int j = 0; j < val.size(); j++)
+        {
+          std::string value = val[j].cast<std::string>();
+          discreteValues.push_back(value);
+        }
       }
     }
-
-
   }
 
   /// Задание нижней границы из поля "_lower_bounds" переданного Python-объекта
@@ -155,10 +163,24 @@ void PYProblem::AddToCache(const double* y, int fNumber, double value) const
 // ------------------------------------------------------------------------------------------------
 void PYProblem::GetBounds(double* lower, double* upper)
 {
-  for (int i = 0; i < Dimension; i++)
+  int n_continuous = lowerBounds.size();
+
+  // Непрерывные переменные - из сохранённых границ
+  for (int i = 0; i < n_continuous; i++)
   {
     lower[i] = lowerBounds[i];
     upper[i] = upperBounds[i];
+  }
+
+  // Дискретные переменные - границы индексов [0, num_values-1]
+  if (NumberOfDiscreteVariable > 0 && mNumberOfValues != nullptr)
+  {
+    for (int i = 0; i < NumberOfDiscreteVariable; i++)
+    {
+      int idx = n_continuous + i;
+      lower[idx] = 0.0;
+      upper[idx] = static_cast<double>(mNumberOfValues[i] - 1);
+    }
   }
 }
 
@@ -228,73 +250,63 @@ int PYProblem::GetAllDiscreteValues(int discreteVariable, double* values)
   if ((discreteVariable > GetDimension()) ||
     (discreteVariable < (GetDimension() - GetNumberOfDiscreteVariable())))
     return IIntegerProgrammingProblem::ERROR_DISCRETE_VALUE;
-  int* mCurrentDiscreteValueIndex = 0;
-  ClearCurrentDiscreteValueIndex(&mCurrentDiscreteValueIndex);
 
-  // сбрасываем значение индекса текущего значения и задаем левую границу
-  GetNextDiscreteValues(mCurrentDiscreteValueIndex, values[0], discreteVariable, -1);
-  int numVal = GetNumberOfValues(discreteVariable);
-  // определяем все остальные значения
-  for (int i = 1; i < numVal; i++)
+  const int di = discreteVariable - (GetDimension() - GetNumberOfDiscreteVariable());
+  int numVal = mNumberOfValues[di];
+
+  // ИСПРАВЛЕНИЕ: возвращаем индексы [0, 1, 2, ..., N-1]
+  for (int i = 0; i < numVal; i++)
   {
-    GetNextDiscreteValues(mCurrentDiscreteValueIndex, values[i], discreteVariable);
+    values[i] = static_cast<double>(i);
   }
+
   return IProblem::OK;
 }
 
 // ------------------------------------------------------------------------------------------------
-int PYProblem::GetNextDiscreteValues(int* mCurrentDiscreteValueIndex, double& value, int discreteVariable, int previousNumber)
+int PYProblem::GetNextDiscreteValues(int* mCurrentDiscreteValueIndex, double& value,
+  int discreteVariable, int previousNumber)
 {
   if ((discreteVariable > GetDimension()) ||
     (discreteVariable < (GetDimension() - GetNumberOfDiscreteVariable())) ||
     (mCurrentDiscreteValueIndex == 0) ||
     (mNumberOfValues == 0))
     return IIntegerProgrammingProblem::ERROR_DISCRETE_VALUE;
-  // если -1 то сбрасываем значение текущего номера
+
+  const int di = discreteVariable - (GetDimension() - GetNumberOfDiscreteVariable());
+
+  // ИСПРАВЛЕНИЕ: дискретные переменные кодируются индексами [0, N-1]
   if (previousNumber == -1)
   {
-    mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()] = 0;
-    value = mLeftBorder;
+    mCurrentDiscreteValueIndex[di] = 0;
+    value = 0.0;
     return IProblem::OK;
   }
   else if (previousNumber == -2)
   {
-    double d = (mRightBorder - mLeftBorder) /
-      (mNumberOfValues[discreteVariable - (GetDimension() - GetNumberOfDiscreteVariable())] - 1);
-    mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()]++;
-    value = mLeftBorder + d *
-      mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()];
+    mCurrentDiscreteValueIndex[di]++;
+    value = static_cast<double>(mCurrentDiscreteValueIndex[di]);
     return IProblem::OK;
   }
   else
   {
-    double d = (mRightBorder - mLeftBorder) /
-      (mNumberOfValues[discreteVariable - (GetDimension() - GetNumberOfDiscreteVariable())] - 1);
-    mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()] =
-      previousNumber;
-    mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()]++;
-    value = mLeftBorder + d * mCurrentDiscreteValueIndex[discreteVariable -
-      GetNumberOfDiscreteVariable()];
+    mCurrentDiscreteValueIndex[di] = previousNumber + 1;
+    value = static_cast<double>(mCurrentDiscreteValueIndex[di]);
     return IProblem::OK;
   }
 }
 
+// ------------------------------------------------------------------------------------------------
 bool PYProblem::IsPermissibleValue(double value, int discreteVariable)
 {
   if ((discreteVariable > GetDimension()) ||
     (discreteVariable < (GetDimension() - GetNumberOfDiscreteVariable())) ||
     (mNumberOfValues == 0))
     return false;
-  double d = (mRightBorder - mLeftBorder) /
-    (mNumberOfValues[discreteVariable - (GetDimension() - GetNumberOfDiscreteVariable())] - 1);
-  double v = 0;
-  for (int i = 0; i < mNumberOfValues[discreteVariable - (GetDimension() - GetNumberOfDiscreteVariable())]; i++)
-  {
-    v = mLeftBorder + d * i;
-    if (fabs(v - value) < AccuracyDouble)
-    {
-      return true;
-    }
-  }
-  return false;
+
+  const int di = discreteVariable - (GetDimension() - GetNumberOfDiscreteVariable());
+
+  // ИСПРАВЛЕНИЕ: проверяем, что value - целое число в диапазоне [0, mNumberOfValues[di]-1]
+  int idx = static_cast<int>(round(value));
+  return (idx >= 0 && idx < mNumberOfValues[di] && fabs(value - idx) < AccuracyDouble);
 }

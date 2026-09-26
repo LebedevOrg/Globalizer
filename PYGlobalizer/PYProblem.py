@@ -333,6 +333,70 @@ class PYProblem:
         else:
             self._optimumPoint = []
 
+    def set_discrete_variables(
+            self,
+            discrete_values: List[List[str]],
+            discrete_names: Optional[List[str]] = None
+    ) -> None:
+        """
+        Установка дискретных переменных для смешанной оптимизации.
+
+        В задачах с дискретными переменными общая размерность делится на:
+        - Непрерывные переменные (идут первыми, границы задаются через set_bounds)
+        - Дискретные переменные (идут последними, допустимые значения задаются здесь)
+
+        Parameters
+        ----------
+        discrete_values : List[List[str]]
+            Список допустимых значений для каждой дискретной переменной.
+            Каждое значение - строка. Например:
+            [["-1", "0", "1"], ["-1", "0", "1"]] для двух дискретных переменных,
+            у каждой по три значения: -1, 0, 1.
+        discrete_names : Optional[List[str]], default=None
+            Имена дискретных переменных. Если не указаны, используются "d0", "d1", ...
+
+        Examples
+        --------
+        >>> # Задача RASTRIGIN_INT: 2 непрерывные + 2 дискретные
+        >>> problem = PYProblem(dimension=2, numCriterions=1)
+        >>> problem.set_bounds([-2.2, -2.2], [1.8, 1.8])
+        >>> problem.set_discrete_variables(
+        ...     [["-1", "0", "1"], ["-1", "0", "1"]],
+        ...     ["discrete_1", "discrete_2"]
+        ... )
+        """
+        if not isinstance(discrete_values, list):
+            raise TypeError(f"discrete_values must be a list, got {type(discrete_values)}")
+
+        # Валидация структуры
+        for i, vals in enumerate(discrete_values):
+            if not isinstance(vals, list):
+                raise TypeError(
+                    f"discrete_values[{i}] must be a list, got {type(vals)}")
+            if len(vals) == 0:
+                raise ValueError(f"discrete_values[{i}] is empty")
+            for j, val in enumerate(vals):
+                if not isinstance(val, str):
+                    raise TypeError(
+                        f"discrete_values[{i}][{j}] must be str, got {type(val)}")
+
+        self.discrete_variable_values = [list(vals) for vals in discrete_values]
+        self.number_of_discrete_variables = len(discrete_values)
+
+        # Имена переменных
+        if discrete_names is None:
+            self.discrete_variable_names = [f"d{i}" for i in range(self.number_of_discrete_variables)]
+        else:
+            if len(discrete_names) != self.number_of_discrete_variables:
+                raise ValueError(
+                    f"discrete_names length ({len(discrete_names)}) != "
+                    f"number of discrete variables ({self.number_of_discrete_variables})")
+            self.discrete_variable_names = list(discrete_names)
+
+        # ИСПРАВЛЕНИЕ: обновляем размерность, а не проверяем
+        n_continuous = len(self._lower_bounds)
+        self._dimension = n_continuous + self.number_of_discrete_variables
+
 
     def set_bounds(
         self, 
