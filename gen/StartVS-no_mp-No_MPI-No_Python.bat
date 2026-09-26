@@ -15,7 +15,7 @@ git submodule update
 
 
 echo [1/2] CMake Configuration...
-call cmake -DGLOBALIZER_BUILD_PROBLEMS=ON -DGLOBALIZER_MAX_DIMENSION=130 -DGLOBALIZER_MAX_Number_Of_Function=70 -DGLOBALIZER_PYTHON=OFF -DGLOBALIZER_BUILD_GCGEN=ON -Drastrigin_build=ON -DrastriginInt_build=ON -DX2_build=ON -Dstronginc3_build=ON -DrastriginC1_build=ON -DGLOBALIZER_BENCHMARKS_PYTHON=OFF ..
+call cmake -DGLOBALIZER_BUILD_PROBLEMS=ON -DGLOBALIZER_MAX_DIMENSION=130 -DGLOBALIZER_MAX_Number_Of_Function=70 -DGLOBALIZER_PYTHON=OFF -DGLOBALIZER_BUILD_GCGEN=ON -Drastrigin_build=ON -DrastriginInt_build=ON -DX2_build=ON -Dstronginc3_build=ON -DrastriginC1_build=ON -DGLOBALIZER_BENCHMARKS_PYTHON=OFF -DGLOBALIZER_BUILD_TESTS=ON ..
 
 if %errorlevel% neq 0 goto error
 

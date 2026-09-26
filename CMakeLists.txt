@@ -636,3 +636,7 @@ install(EXPORT GlobalizerTargets
         NAMESPACE Globalizer::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Globalizer)
 
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/GlobalizerConfig.cmake"
+     "include(\"\${CMAKE_CURRENT_LIST_DIR}/GlobalizerTargets.cmake\")\n")
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/GlobalizerConfig.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Globalizer)
