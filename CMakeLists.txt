@@ -426,23 +426,30 @@ endif()
 include_directories(${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 
-	
-if (${IS_CLANG_COMPILER})	
-  target_link_libraries(${GLOBALIZER_LIB_NAME} PRIVATE
-    ${GLOBALIZER_MPI_LIB}
-    ${GLOBALIZER_MPFR_LIB}
-	${GLOBALIZER_GMP_LIB}
-    ${GLOBALIZER_MPIR_LIB}
-    ${DISLIN_LIB}
-	OpenMP::OpenMP_CXX  )
-else()
-  target_link_libraries(${GLOBALIZER_LIB_NAME} PRIVATE
-    ${GLOBALIZER_MPI_LIB}
-    ${GLOBALIZER_MPFR_LIB}
-	${GLOBALIZER_GMP_LIB}
-    ${GLOBALIZER_MPIR_LIB}
-    ${DISLIN_LIB})
 
+if(GLOBALIZER_USE_MP)
+    set(GLOBALIZER_MP_LINK
+        $<BUILD_INTERFACE:${GLOBALIZER_MPFR_LIB}>
+        $<BUILD_INTERFACE:${GLOBALIZER_MPIR_LIB}>
+        ${GLOBALIZER_GMP_LIB}
+    )
+else()
+    set(GLOBALIZER_MP_LINK "")
+endif()
+
+if(IS_CLANG_COMPILER)
+    target_link_libraries(${GLOBALIZER_LIB_NAME} PRIVATE
+        ${GLOBALIZER_MPI_LIB}
+        ${GLOBALIZER_MP_LINK}
+        ${DISLIN_LIB}
+        OpenMP::OpenMP_CXX
+    )
+else()
+    target_link_libraries(${GLOBALIZER_LIB_NAME} PRIVATE
+        ${GLOBALIZER_MPI_LIB}
+        ${GLOBALIZER_MP_LINK}
+        ${DISLIN_LIB}
+    )
 endif()
 
 # ------------------------------------------------------------------------------
@@ -473,7 +480,7 @@ if (${GLOBALIZER_USE_MP})
   endif()
 endif()
 
-message("MPI lib: " ${GLOBALIZER_LIB_NAME})
+message(STATUS "MPI libraries: ${GLOBALIZER_MPI_LIB}")
 
 set_target_properties(${GLOBALIZER_LIB_NAME} PROPERTIES OUTPUT_NAME_DEBUG ${GLOBALIZER_LIB_NAME_DEBUG})
 set_target_properties(${GLOBALIZER_LIB_NAME} PROPERTIES OUTPUT_NAME_RELEASE ${GLOBALIZER_LIB_NAME_RELEASE})
@@ -533,7 +540,9 @@ if (IS_MICROSOFT_COMPILER)
     list(APPEND 3RD_PARTY_PROJECT "builder_sample")	
   endif()
   
-  set_property(TARGET ${3RD_PARTY_PROJECT} PROPERTY FOLDER "3rd-party")
+  if(3RD_PARTY_PROJECT)
+    set_property(TARGET ${3RD_PARTY_PROJECT} PROPERTY FOLDER "3rd-party")
+  endif()
   
   set(MultiplePrecision "")
   
@@ -544,7 +553,9 @@ if (IS_MICROSOFT_COMPILER)
 	"mpfr" "mpir")
   endif()
   
-  set_property(TARGET ${MultiplePrecision} PROPERTY FOLDER "multiple precision")
+  if(MultiplePrecision)
+  	set_property(TARGET ${MultiplePrecision} PROPERTY FOLDER "multiple precision")
+  endif()
 
   source_group("Header Files" FILES ${ROOT_HEADERS})
   source_group("Header Files\\Parameters" FILES ${PARAMETERS_HEADERS})
@@ -605,24 +616,23 @@ if(TARGET mpi_stub)
   )
 endif()
 
-install(TARGETS ${GLOBALIZER_LIB_NAME} mpi_stub
+# Цели, которые реально существуют в текущей конфигурации
+set(GLOBALIZER_INSTALL_TARGETS
+    ${GLOBALIZER_LIB_NAME}
+)
+
+if(TARGET mpi_stub)
+    list(APPEND GLOBALIZER_INSTALL_TARGETS mpi_stub)
+endif()
+
+install(TARGETS ${GLOBALIZER_INSTALL_TARGETS}
         EXPORT GlobalizerTargets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-# Если MPI выключен, копируем mpi_stub.lib в SDK
-if(NOT GLOBALIZER_USE_MPI AND TARGET mpi_stub)
-    install(TARGETS mpi_stub
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-endif()
-
 install(EXPORT GlobalizerTargets
-        FILE GlobalizerConfig.cmake
+        FILE GlobalizerTargets.cmake
         NAMESPACE Globalizer::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Globalizer)
 
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/GlobalizerConfig.cmake"
-     "include(\"\${CMAKE_CURRENT_LIST_DIR}/GlobalizerConfig.cmake\")\n")
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/GlobalizerConfig.cmake"
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Globalizer)

@@ -15,32 +15,36 @@
 #include <iostream>
 #include <string>
 
-namespace pyglob {
+namespace pyglob
+{
 
-/// Уровни логирования. Чем выше — тем подробнее.
-enum class LogLevel {
-  Silent = 0,  ///< ничего не печатать
-  Error  = 1,  ///< только ошибки (по умолчанию)
-  Info   = 2,  ///< ход решения: создание задачи, старт/финиш солвера
-  Debug  = 3   ///< детальная отладка: значения в точках, тайминги
-};
+  /// Уровни логирования. Чем выше — тем подробнее.
+  enum class LogLevel
+  {
+    Silent = 0,  ///< ничего не печатать
+    Error = 1,  ///< только ошибки (по умолчанию)
+    Info = 2,  ///< ход решения: создание задачи, старт/финиш солвера
+    Debug = 3   ///< детальная отладка: значения в точках, тайминги
+  };
 
-/// Глобальный текущий уровень (одна копия на процесс, инициализируется лениво).
-inline LogLevel& GlobalLogLevel() {
-  static LogLevel level = LogLevel::Error;
-  return level;
-}
+  /// Глобальный текущий уровень (одна копия на процесс, инициализируется лениво).
+  inline LogLevel& GlobalLogLevel()
+  {
+    static LogLevel level = LogLevel::Error;
+    return level;
+  }
 
-inline void SetLogLevel(LogLevel level) { GlobalLogLevel() = level; }
+  inline void SetLogLevel(LogLevel level) { GlobalLogLevel() = level; }
 
-/// Перегрузка для удобного проброса int из Python (0..3).
-inline void SetLogLevel(int level) {
-  if (level < 0) level = 0;
-  if (level > 3) level = 3;
-  GlobalLogLevel() = static_cast<LogLevel>(level);
-}
+  /// Перегрузка для удобного проброса int из Python (0..3).
+  inline void SetLogLevel(int level)
+  {
+    if (level < 0) level = 0;
+    if (level > 3) level = 3;
+    GlobalLogLevel() = static_cast<LogLevel>(level);
+  }
 
-inline int GetLogLevel() { return static_cast<int>(GlobalLogLevel()); }
+  inline int GetLogLevel() { return static_cast<int>(GlobalLogLevel()); }
 
 } // namespace pyglob
 

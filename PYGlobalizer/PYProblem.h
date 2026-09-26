@@ -89,15 +89,19 @@ private:
   std::vector<double> optimumCoordinate;
 
   // Кэш вычислений — снижает число вызовов Python при повторных обращениях
-  struct CacheKey {
+  struct CacheKey
+  {
     std::vector<double> point;
     int fNumber;
-    bool operator==(const CacheKey& o) const {
+    bool operator==(const CacheKey& o) const
+    {
       return fNumber == o.fNumber && point == o.point;
     }
   };
-  struct CacheKeyHash {
-    std::size_t operator()(const CacheKey& k) const {
+  struct CacheKeyHash
+  {
+    std::size_t operator()(const CacheKey& k) const
+    {
       std::size_t h = std::hash<int>{}(k.fNumber);
       for (double v : k.point)
         h ^= std::hash<double>{}(v)+0x9e3779b9 + (h << 6) + (h >> 2);
