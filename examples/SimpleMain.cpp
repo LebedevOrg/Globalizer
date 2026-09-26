@@ -15,6 +15,7 @@
 
 
 #include "Globalizer.h"
+#include <math.h>
 
 enum ProblemName {
     RASTRIGIN,
@@ -43,7 +44,7 @@ double StronginC3Functionals(const double* y, int fNumber)
         break;
     case 3: // критерий
     {
-        double t1 = pow(0.5 * x1 - 0.5, 4.0);
+        double t1 = pow((double)0.5 * x1 - 0.5, (double)4.0);
         double t2 = pow(x2 - 1.0, 4.0);
         res = 1.5 * x1 * x1 * exp(1.0 - x1 * x1 - 20.25 * (x1 - x2) * (x1 - x2));
         res = res + t1 * t2 * exp(2.0 - t1 - t2);
@@ -55,14 +56,17 @@ double StronginC3Functionals(const double* y, int fNumber)
     return res;
 }
 
+
+
+
 // ------------------------------------------------------------------------------------------------
 int main(int argc, char* argv[])
 {
 
     GlobalizerInitialization(argc, argv);
 
-    parameters.Dimension = 2; // Размерность задачи
-    ProblemName problemName = STRONGINC3_FUNCTION_POINTER; // Задача Стронгина задается как указатель на функцию
+    parameters.Dimension = 6; // Размерность задачи
+    ProblemName problemName = RASTRIGIN_INT; // Задача Стронгина задается как указатель на функцию
     IProblem* problem = nullptr;
     parameters.IsPlot = true; // Включаем рисование графика функции с точками испытаний (сохраняются в файл)
 

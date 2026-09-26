@@ -10,9 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BIN_DIR = ROOT / "_bin"
 HELPERS_DIR = ROOT / "PYGlobalizer"
-BENCHMARKS_DIR = ROOT / "third_party" / "Problems" / "Problems"
 
-for d in (BENCHMARKS_DIR, HELPERS_DIR, BIN_DIR):
+for d in (HELPERS_DIR, BIN_DIR):
     if d.exists():
         sys.path.insert(0, str(d))
 

@@ -116,6 +116,8 @@ static SolutionResult* run_solver(IProblem* problem_ptr, std::string& solver_nam
 
   // Отпускаем GIL: решатель - чистый C++. GIL берётся заново
   // только при вызове целевой функции в PYProblem::CalculateFunctionals.
+
+
   py::gil_scoped_release release;
 
   if (SelectSolver(problem_ptr)) {
@@ -148,6 +150,8 @@ static py::dict make_result_dict(SolutionResult* result,
   py::dict d;
   d["success"] = true;
   d["best_value"] = result->GetBestValue();
+
+
 
   const double* bp = result->GetBestPoint();
   py::list point_list;
@@ -242,6 +246,7 @@ py::dict solve(py::object problem, SolverParameters params = SolverParameters())
     if (problem_ptr->Initialize() != IProblem::OK)
       throw std::runtime_error("Problem initialization failed");
     parameters.Dimension = problem_ptr->GetDimension();
+
 
     std::string solver_name;
     SolutionResult* result = run_solver(problem_ptr.get(), solver_name);

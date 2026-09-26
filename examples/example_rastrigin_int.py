@@ -17,9 +17,9 @@ import math
 ROOT = Path(__file__).resolve().parent.parent
 BIN_DIR = ROOT / "_bin"
 HELPERS_DIR = ROOT / "PYGlobalizer"
-BENCHMARKS_DIR = ROOT / "third_party" / "Problems" / "Problems"
 
-for d in (BENCHMARKS_DIR, HELPERS_DIR, BIN_DIR):
+
+for d in (HELPERS_DIR, BIN_DIR):
     if d.exists():
         sys.path.insert(0, str(d))
 
@@ -87,7 +87,7 @@ def main() -> None:
     print(f"Известный оптимум:   f* = 0.0 в точке (0, 0, 0, 0)")
     print(f"Итераций:            {max_iterations}")
     print(f"Параметр r:          {r}")
-    print(f"Локальная догонка:   {'Да' if local_refine else 'Нет'}")
+    print(f"Локальное уточнение:   {'Да' if local_refine else 'Нет'}")
     print(f"Потоков:             {num_threads}")
     print("-" * 70)
 

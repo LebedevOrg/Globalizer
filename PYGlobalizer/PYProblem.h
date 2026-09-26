@@ -25,6 +25,7 @@
 #pragma once
 #include <iostream>
 #include <vector>
+#include <string>
 #include <functional>
 #include <mutex>
 #include <unordered_map>
@@ -58,13 +59,7 @@ namespace py = pybind11;
 /**
 Класс, реализующий функционал хранения задачи и её передачи из Python.
 
-Исправления относительно исходной версии:
-  - functionsOfProblem: тип изменён с vector<py::object> на
-    vector<std::function<double(const double*)>>, что позволяет хранить
-    C++-лямбды, захватывающие py::function.
-  - Все методы объявлены без inline-тел — реализации вынесены в PYProblem.cpp,
-    чтобы устранить ошибки "функция уже имеет текст реализации".
-*/
+**/
 class PYProblem : public Problem<PYProblem>
 {
 #undef OWNER_NAME
@@ -76,16 +71,22 @@ private:
   // захватывающими py::function — в отличие от vector<py::object>.
   std::vector<std::function<double(const double*)>> functionsOfProblem;
 
-  // Границы поиска
+  // Границы НЕПРЕРЫВНЫХ переменных (размер = число непрерывных переменных)
   std::vector<double> lowerBounds;
   std::vector<double> upperBounds;
 
   // Строковые представления дискретных значений (для отладки / будущего API)
   std::vector<std::string> discreteValues;
+  /// Допустимые значения каждой дискретной переменной в числовом виде
+  std::vector<std::vector<double>> mDiscreteNumeric;
+  /// Число дискретных переменных
+  int mNumDiscrete = 0;
+  /// Число непрерывных переменных
+  int mNumContinuous = 0;
 
   // Информация об оптимуме (опционально)
-  bool   isSetOptimum;
-  double optimumValue;
+  bool   isSetOptimum = false;
+  double optimumValue = 0.0;
   std::vector<double> optimumCoordinate;
 
   // Кэш вычислений — снижает число вызовов Python при повторных обращениях
@@ -115,12 +116,21 @@ private:
   bool   FindInCache(const double* y, int fNumber, double& result) const;
   void   AddToCache(const double* y, int fNumber, double value)  const;
 
+  /// Номер дискретной переменной (0..mNumDiscrete-1) по номеру координаты,
+  /// -1 — если координата не дискретная
+  int DiscreteIndex(int variable) const;
+  /// Копирует размеры mDiscreteNumeric в базовый массив mNumberOfValues
+  void SyncNumberOfValues();
+
 public:
   // Конструктор принимает Python-объект задачи (py::object по значению —
   // pybind11 не допускает привязку неконстантных lvalue-ссылок из Python).
   explicit PYProblem(py::object data);
+  ~PYProblem();
 
-  // --- Обязательные методы интерфейса IProblem / IIntegerProgrammingProblem ---
+  /// Переопределено (как в ProblemFromFunctionPointers): повторный вызов
+  /// Initialize() из решателя НЕ должен сбрасывать параметры задачи
+  void Init(int argc, char* argv[], bool isMPIInit = false) override;
 
   /// Заполняет массивы нижних и верхних границ поиска
   void GetBounds(double* lower, double* upper) override;
@@ -128,10 +138,10 @@ public:
   /// Вычисляет значение функционала с номером fNumber в точке y
   double CalculateFunctionals(const double* y, int fNumber) override;
 
-  /// Возвращает число дискретных переменных
-  int GetNumberOfDiscreteVariable() override;
+  int GetOptimumValue(double& value) const override;
+  int GetOptimumPoint(double* point) const override;
 
-  /// Возвращает число допустимых значений дискретной переменной с номером idx
+  int GetNumberOfDiscreteVariable() override;
   int GetNumberOfValues(int discreteVariable) override;
 
   /// Заполняет массив values всеми допустимыми значениями переменной
@@ -145,4 +155,7 @@ public:
 
   /// Проверяет, является ли value допустимым значением дискретной переменной
   bool IsPermissibleValue(double value, int discreteVariable) override;
+
+  /// Проверка введенных значений
+  virtual int CheckValue(int index = -1) override;
 };
