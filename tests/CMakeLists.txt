@@ -36,6 +36,8 @@ target_link_libraries(${PROJECT_NAME_STR}
   ${GLOBALIZER_MPI_LIB}
   ${GLOBALIZER_MPFR_LIB}
   ${GLOBALIZER_MPIR_LIB}
+  # Solver -> Plotters использует Python C-API (при USE_PYTHON); пусто без Python.
+  ${Python_LIBRARIES}
   gtest)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND MINGW)
@@ -46,3 +48,11 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 endif()
 
 add_test(all_tests ${TESTS_OUTPUT_DIRECTORY}/${PROJECT_NAME_STR})
+
+# Тесты линкуются с Python (через Solver -> Plotters): на Windows для запуска
+# нужна pythonXY.dll, она лежит рядом с интерпретатором.
+if (WIN32 AND Python_EXECUTABLE)
+  get_filename_component(_tests_python_dir "${Python_EXECUTABLE}" DIRECTORY)
+  set_tests_properties(all_tests PROPERTIES
+    ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${_tests_python_dir}")
+endif()
