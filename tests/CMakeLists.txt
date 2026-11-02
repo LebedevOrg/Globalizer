@@ -38,7 +38,10 @@ target_link_libraries(${PROJECT_NAME_STR}
   ${GLOBALIZER_MPIR_LIB}
   gtest)
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND MINGW)
+  # В MinGW нет libdl.
+  set_target_properties(${PROJECT_NAME_STR} PROPERTIES LINK_FLAGS "-lm -lpthread")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   set_target_properties(${PROJECT_NAME_STR} PROPERTIES LINK_FLAGS "-lm -Wl,--no-as-needed -ldl -lpthread")
 endif()
 
