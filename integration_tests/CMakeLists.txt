@@ -104,7 +104,6 @@ set(GLOBALIZER_CPP_EXAMPLES
   Main
   Main_ackley
   SampleMain
-  HDOptimizationMain
   DynamicProblemMain
   GCGenMain
   GCGenGKLSMain

@@ -30,7 +30,6 @@
 #include "Solver.h"
 #include "ProblemFromFunctionPointers.h"
 #include "SolverRSA.hpp"
-#include "HDSolver.h"
 
 #ifdef _GLOBALIZER_BENCHMARKS
 #include "IGlobalOptimizationProblem.h"
@@ -76,10 +75,3 @@ SolutionResult* GlobalizerSolveProblem(IProblem*& problem);
   \param[in] argv - Аргументы командной строки
 */
 void CreateCurentProblemsParameters(int argc, char* argv[]);
-
-/**
-Выбор решателя, true - Solver, false - HDSolver
-\param[in] problem - задача оптимизации
-
-*/
-bool SelectSolver(IProblem* problem);

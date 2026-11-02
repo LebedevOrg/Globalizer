@@ -44,8 +44,6 @@ const int ChildStopMsg = -101;
 
 
 std::string GetFileExtension(const std::string& filename, bool include_dot = false);
-void FindXY(int& x, int& y, int z, int C);
-bool IsBelowGraph(int x, int y);
 
 
 /* ============================================================================================= *\

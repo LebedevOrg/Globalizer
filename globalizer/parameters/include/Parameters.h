@@ -189,8 +189,6 @@ public:
   TDouble<Parameters> LtXi;
   /// Вычислять ли значения функции в крайних точках интервала
   TBool<Parameters> IsCalculationInBorderPoint;
-  /// Количество итераций решателя задач большой размерности
-  TInt<Parameters> HDSolverIterationCount;
 
 
   // -----------------------------------------------------------------------

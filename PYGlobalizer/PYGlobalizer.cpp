@@ -120,22 +120,12 @@ static SolutionResult* run_solver(IProblem* problem_ptr, std::string& solver_nam
 
   py::gil_scoped_release release;
 
-  if (SelectSolver(problem_ptr)) {
-    solver_name = "Solver";
-    PY_LOG_INFO("Using Solver (index method)");
-    Solver solver(problem_ptr);
-    if (solver.Solve() != SYSTEM_OK)
-      throw std::runtime_error("Solver::Solve() failed");
-    result = solver.GetSolutionResult();
-  }
-  else {
-    solver_name = "HDSolver";
-    PY_LOG_INFO("Using HDSolver (high-dimensional method)");
-    HDSolver solver(problem_ptr);
-    if (solver.Solve() != SYSTEM_OK)
-      throw std::runtime_error("HDSolver::Solve() failed");
-    result = solver.GetSolutionResult();
-  }
+  solver_name = "Solver";
+  PY_LOG_INFO("Using Solver (index method)");
+  Solver solver(problem_ptr);
+  if (solver.Solve() != SYSTEM_OK)
+    throw std::runtime_error("Solver::Solve() failed");
+  result = solver.GetSolutionResult();
   return result;
 }
 
