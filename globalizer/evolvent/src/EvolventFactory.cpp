@@ -34,7 +34,9 @@ IEvolvent* EvolventFactory::CreateEvolvent(int _N, int _m)
 	if (parameters.MapType == mpNoninjective)
 		pEvolvent = new NoninjectiveEvolvent(_N, _m,1<<_N);
 	if (parameters.MapType == mpRotated)
-		pEvolvent = new RotatedEvolvent(_N, _m);
+		// L = 1: одна развёртка (метод использует только EvolventNum = 0);
+		// значение по умолчанию L = 0 при N > 1 недопустимо.
+		pEvolvent = new RotatedEvolvent(_N, _m, 1);
 	if (parameters.MapType == mpShifted)
 		pEvolvent = new ShiftedEvolvent(_N, _m);
 	if (parameters.MapType == mpSmooth)

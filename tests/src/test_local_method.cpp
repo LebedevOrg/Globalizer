@@ -167,19 +167,12 @@ TEST_F(LocalMethodTest, copy_constructor_is_forbidden)
 
 // ================================================================================================
 //  ParallelHookeJeevesMethod
-//
-//  ОТКЛЮЧЕНО (DISABLED_): в ParallelHookeJeevesMethod::EvaluateObjectiveFunctiuon
-//  точка копируется по смещению parameters.Dimension:
-//      memcpy(mFunctionsArgument + parameters.Dimension, x, mDimension * sizeof(double));
-//  а mFunctionsArgument выделен размером N, т.е. запись идёт за границу буфера
-//  (порча кучи, падение в ~LocalMethod), и функция вычисляется не в точке x.
-//  После исправления дефекта снимите префикс DISABLED_.
 // ================================================================================================
 
 class ParallelHookeJeevesTest : public LocalMethodTest,
   public ::testing::WithParamInterface<int> {};
 
-TEST_P(ParallelHookeJeevesTest, DISABLED_converges_with_batch_size)
+TEST_P(ParallelHookeJeevesTest, converges_with_batch_size)
 {
   parameters.NumPoints = GetParam();
   Build(MakeParaboloid(2));
@@ -196,7 +189,7 @@ TEST_P(ParallelHookeJeevesTest, DISABLED_converges_with_batch_size)
 
 INSTANTIATE_TEST_SUITE_P(BatchSizes, ParallelHookeJeevesTest, ::testing::Values(1, 2, 4, 8));
 
-TEST_F(LocalMethodTest, DISABLED_parallel_hooke_jeeves_with_constraints_and_logging)
+TEST_F(LocalMethodTest, parallel_hooke_jeeves_with_constraints_and_logging)
 {
   parameters.NumPoints = 4;
   Build(MakeConstrainedProblem());
@@ -206,6 +199,49 @@ TEST_F(LocalMethodTest, DISABLED_parallel_hooke_jeeves_with_constraints_and_logg
   lm.SetEps(1e-6);
   Trial best = lm.StartOptimization();
   EXPECT_GE(best.y[0], 0.1 - 1e-9);
-  EXPECT_LT(best.FuncValues[1], start.FuncValues[1]);
+  EXPECT_NEAR(best.y[0], 0.1, 1e-3);
+  EXPECT_NEAR(best.y[1], 0.0, 1e-3);
+  EXPECT_NEAR(best.FuncValues[1], 0.01, 1e-3);
   EXPECT_FALSE(lm.GetSearchSequence().empty());
+  EXPECT_GE((int)lm.GetSearchSequence().size(), lm.GetTrialsCounter());
+}
+
+/// Недопустимые точки (нарушено ограничение) не должны считаться лучшими,
+/// даже если значение ограничения меньше значений критерия.
+TEST_P(ParallelHookeJeevesTest, infeasible_points_are_never_best)
+{
+  parameters.NumPoints = GetParam();
+  // g = 0.2 - y0 <= 0; f = 10 + (y0 - 0.2)^2 + y1^2 (всегда > 10 > g).
+  Build(new ProblemFromFunctionPointers(2, std::vector<double>(2, -1.0), std::vector<double>(2, 1.0),
+    [](const double* y, int f)
+      { return f == 0 ? 0.2 - y[0] : 10.0 + (y[0] - 0.2) * (y[0] - 0.2) + y[1] * y[1]; },
+    2));
+  OMPCalculation calculation(*task);
+  Trial start = StartAt(0.7, 0.5);
+  ParallelHookeJeevesMethod lm(task.get(), start, calculation);
+  lm.SetEps(1e-7);
+  Trial best = lm.StartOptimization();
+  EXPECT_GE(best.y[0], 0.2 - 1e-9);
+  EXPECT_NEAR(best.FuncValues[1], 10.0, 1e-4);
+}
+
+/// Точка у границы области: часть пробных шагов выходит за область,
+/// неполные пакеты вычислителя не должны обращаться к старым испытаниям.
+TEST_P(ParallelHookeJeevesTest, stays_inside_domain_near_boundary)
+{
+  parameters.NumPoints = GetParam();
+  Build(new ProblemFromFunctionPointers(2, std::vector<double>(2, -1.0), std::vector<double>(2, 1.0),
+    std::vector<std::function<double(const double*)>>(1, [](const double* y)
+      { return (y[0] - 2.0) * (y[0] - 2.0) + y[1] * y[1]; })));
+  OMPCalculation calculation(*task);
+  for (int run = 0; run < 3; run++)  // повторные запуски на одном вычислителе
+  {
+    Trial start = StartAt(0.95, 0.5);
+    ParallelHookeJeevesMethod lm(task.get(), start, calculation, run % 2);
+    lm.SetEps(1e-7);
+    Trial best = lm.StartOptimization();
+    EXPECT_LE(best.y[0], 1.0);
+    EXPECT_NEAR(best.y[0], 1.0, 1e-3);
+    EXPECT_NEAR(best.y[1], 0.0, 1e-3);
+  }
 }

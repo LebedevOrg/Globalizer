@@ -6,7 +6,7 @@
 //                                                                         //
 //  Purpose:   Модульные тесты вспомогательных классов и функций:          //
 //             GetFileExtension, Exception, OutputMessage, SolutionResult, //
-//             TaskFactory, HDTask, Performance, PriorityQueue, Trial,     //
+//             TaskFactory, Performance, PriorityQueue, Trial,             //
 //             SearchData, Evolvent (копирование), Parameters (печать).    //
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
@@ -21,7 +21,6 @@
 #include "Messages.h"
 #include "SolutionResult.h"
 #include "TaskFactory.h"
-#include "HDTask.h"
 #include "Performance.h"
 #include "Queue.h"
 #include "Trial.h"
@@ -182,123 +181,39 @@ TEST(SolutionResultTest, result_with_trial)
 }
 
 // ================================================================================================
-//  TaskFactory и HDTask
+//  TaskFactory
 // ================================================================================================
 
 class TaskFactoryTest : public ::testing::Test
 {
 protected:
   std::unique_ptr<ProblemFromFunctionPointers> problem;
-  int oldStartPointSize = 0;
-  std::vector<double> oldStartPoint;
-
-  void SetUp() override
-  {
-    ResetSolverParameters(2);
-    oldStartPointSize = parameters.StartPoint.GetSize();
-    for (int i = 0; i < oldStartPointSize; i++)
-      oldStartPoint.push_back(parameters.StartPoint[i]);
-  }
-
-  void TearDown() override
-  {
-    parameters.StartPoint.SetSize(oldStartPointSize);
-    for (int i = 0; i < oldStartPointSize; i++)
-      parameters.StartPoint[i] = oldStartPoint[i];
-    ResetSolverParameters(2);
-    problem.reset();
-  }
+  void SetUp() override { ResetSolverParameters(2); }
+  void TearDown() override { ResetSolverParameters(2); problem.reset(); }
 };
 
-TEST_F(TaskFactoryTest, creates_regular_task_by_default)
+TEST_F(TaskFactoryTest, creates_tasks)
 {
   problem.reset(MakeParaboloid(2));
   std::unique_ptr<Task> t(TaskFactory::CreateTask(problem.get(), 0));
   ASSERT_NE(t, nullptr);
-  EXPECT_EQ(dynamic_cast<HDTask*>(t.get()), nullptr);
   EXPECT_EQ(t->GetN(), 2);
+  EXPECT_EQ(t->getProblem(), problem.get());
 
   std::unique_ptr<Task> empty(TaskFactory::CreateTask());
   ASSERT_NE(empty, nullptr);
-  EXPECT_EQ(dynamic_cast<HDTask*>(empty.get()), nullptr);
 
   std::unique_ptr<Task> clone(TaskFactory::CreateTask(t.get()));
   ASSERT_NE(clone, nullptr);
   EXPECT_EQ(clone->GetN(), 2);
 }
 
-TEST_F(TaskFactoryTest, creates_hd_task_for_hd_search)
+TEST_F(TaskFactoryTest, tasks_get_increasing_numbers)
 {
-  parameters.TypeSolver = HDSearch;
   problem.reset(MakeParaboloid(2));
-  std::unique_ptr<Task> t(TaskFactory::CreateTask(problem.get(), 0));
-  EXPECT_NE(dynamic_cast<HDTask*>(t.get()), nullptr);
-  std::unique_ptr<Task> empty(TaskFactory::CreateTask());
-  EXPECT_NE(dynamic_cast<HDTask*>(empty.get()), nullptr);
-}
-
-/**
- HDTask решает подзадачу: координаты [start, start + Dimension) берутся из
- точки метода, остальные — из parameters.StartPoint. StartPoint должен быть
- задан на полную размерность задачи (так его готовил прежний HDSolver).
-*/
-TEST_F(TaskFactoryTest, hd_task_maps_subproblem_coordinates)
-{
-  problem.reset(MakeParaboloid(4));  // центр (0.3, -0.2, 0.3, -0.2)
-  parameters.Dimension = 2;
-  parameters.StartPoint.SetSize(4);
-  for (int i = 0; i < 4; i++)
-    parameters.StartPoint[i] = 0.0;
-
-  HDTask task(problem.get(), 0);
-  task.SetStartParameterNumber(2);
-  EXPECT_DOUBLE_EQ(task.GetA()[0], -1.0);
-  EXPECT_DOUBLE_EQ(task.GetB()[1], 1.0);
-
-  double y[2] = { 0.3, -0.2 };
-  // Точка задачи: (0, 0, 0.3, -0.2) -> 0.3^2 + 0.2^2.
-  EXPECT_NEAR(task.CalculateFuncs(y, 0), 0.13, 1e-12);
-
-  double full[4];
-  task.TransformPoint(full, y);
-  EXPECT_DOUBLE_EQ(full[0], 0.0);
-  EXPECT_DOUBLE_EQ(full[2], 0.3);
-  EXPECT_DOUBLE_EQ(full[3], -0.2);
-
-  Trial point;
-  task.CopyPoint(full, &point);
-  EXPECT_DOUBLE_EQ(point.y[0], 0.3);
-  EXPECT_DOUBLE_EQ(point.y[1], -0.2);
-
-  EXPECT_THROW(task.CalculateFuncsInManyPoints(y, 0, 1, full), const char*);
-
-  std::unique_ptr<Task> clone(task.Clone());
-  HDTask* hdClone = dynamic_cast<HDTask*>(clone.get());
-  ASSERT_NE(hdClone, nullptr);
-  EXPECT_NEAR(hdClone->CalculateFuncs(y, 0), 0.13, 1e-12);
-}
-
-TEST_F(TaskFactoryTest, hd_task_mixed_integer_flags)
-{
-  problem.reset(new ProblemFromFunctionPointers(2, 1,
-    std::vector<double>(2, -1.0), std::vector<double>(2, 1.0), std::vector<int>{3},
-    std::vector<std::function<double(const double*)>>(1, [](const double* y) { return y[0] + y[1]; })));
-  HDTask task(problem.get(), 0);
-  EXPECT_EQ(task.GetNumberOfDiscreteVariable(), 1);
-  EXPECT_EQ(task.GetNumberOfContinuousVariable(), 1);
-  int startDiscrete = task.GetStartDiscreteVariable();
-  task.SetStartIndex(3);
-  EXPECT_EQ(task.GetStartDiscreteVariable(), startDiscrete + 3);
-
-  task.UnsetMixedInteger();
-  EXPECT_EQ(task.GetNumberOfDiscreteVariable(), 0);
-  EXPECT_EQ(task.GetNumberOfContinuousVariable(), 2);
-  task.SetMixedInteger();
-  EXPECT_EQ(task.GetNumberOfDiscreteVariable(), 1);
-
-  HDTask empty;
-  std::unique_ptr<Task> emptyClone(empty.Clone());
-  EXPECT_NE(dynamic_cast<HDTask*>(emptyClone.get()), nullptr);
+  std::unique_ptr<Task> first(TaskFactory::CreateTask(problem.get(), 0));
+  std::unique_ptr<Task> second(TaskFactory::CreateTask(problem.get(), 0));
+  EXPECT_EQ(second->num, first->num + 1);
 }
 
 // ================================================================================================
@@ -400,14 +315,13 @@ TEST(TrialCopyTest, copy_constructor_and_assignment)
 
   EXPECT_EQ(copy.iterationNumber, 9);
 
-  // operator= (в отличие от конструктора копирования) не переносит
-  // iterationNumber и creationTime — поэтому здесь они не проверяются.
   Trial assigned;
   assigned = src;
   EXPECT_DOUBLE_EQ(assigned.X().toDouble(), 0.25);
   EXPECT_DOUBLE_EQ(assigned.y[0], 0.1);
   EXPECT_DOUBLE_EQ(assigned.FuncValues[0], 3.5);
   EXPECT_EQ(assigned.K, 4);
+  EXPECT_EQ(assigned.iterationNumber, 9);
   assigned = assigned;  // самоприсваивание
   EXPECT_DOUBLE_EQ(assigned.y[0], 0.1);
 }

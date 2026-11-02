@@ -334,11 +334,8 @@ TEST_P(SolverMapTypeTest, solves_with_map_type)
   EXPECT_LT(res->GetBestValue(), 0.05);
 }
 
-// mpRotated в размерности > 1 здесь не проверяется: EvolventFactory создаёт
-// RotatedEvolvent без параметра L (по умолчанию 0), и конструктор бросает
-// "L is out of range". См. solves_1d_with_rotated_map.
 INSTANTIATE_TEST_SUITE_P(MapTypes, SolverMapTypeTest,
-  ::testing::Values(mpBase, mpLinar, mpNoninjective, mpShifted, mpSmooth));
+  ::testing::Values(mpBase, mpLinar, mpNoninjective, mpRotated, mpShifted, mpSmooth));
 
 TEST_F(SolverTest, solves_1d_with_rotated_map)
 {
@@ -491,10 +488,8 @@ TEST_P(SolverLocalRefineTest, final_local_refinement_improves_solution)
   ExpectNearParaboloidOptimum(*refinedRes, 2, 1e-2);
 }
 
-// ParallelHookeJeeves не проверяется: метод портит кучу (см. test_local_method.cpp,
-// раздел ParallelHookeJeevesMethod). После исправления добавьте его в список.
 INSTANTIATE_TEST_SUITE_P(LocalMethods, SolverLocalRefineTest,
-  ::testing::Values(HookeJeeves));
+  ::testing::Values(HookeJeeves, ParallelHookeJeeves));
 
 TEST_F(SolverTest, local_refinement_on_updated_minimum)
 {

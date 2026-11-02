@@ -145,6 +145,11 @@ TEST_F(ProblemFromFunctionPointersTest, discrete_variables)
   EXPECT_DOUBLE_EQ(v, 1.0);
   delete[] index;
 
+  // Номер переменной == размерности — уже вне диапазона.
+  EXPECT_EQ(p->GetNumberOfValues(2), -1);
+  EXPECT_EQ(p->GetAllDiscreteValues(2, values), (int)IIntegerProgrammingProblem::ERROR_DISCRETE_VALUE);
+  EXPECT_FALSE(p->IsPermissibleValue(0.0, 2));
+
   EXPECT_TRUE(p->IsPermissibleValue(0.0, 1));
   EXPECT_TRUE(p->IsPermissibleValue(1.0, 1));
   EXPECT_FALSE(p->IsPermissibleValue(0.5, 1));
@@ -332,6 +337,89 @@ TEST_F(GlobalizerBenchmarksProblemTest, discrete_values_enumeration)
   EXPECT_DOUBLE_EQ(v, 1.0);
   p.ClearCurrentDiscreteValueIndex(&index);  // повторный вызов освобождает старый массив
   delete[] index;
+}
+
+/// Две непрерывные и одна дискретная переменная: номер дискретной переменной
+/// (2) не совпадает с числом дискретных (1) — раньше индекс выходил за массив.
+class FakeTwoContinuousOneDiscrete : public FakeMixedProblem
+{
+public:
+  FakeTwoContinuousOneDiscrete() { dimension = 3; }
+  int SetDimension(int d) override { return d == 3 ? PROBLEM_OK : PROBLEM_ERROR; }
+  void GetBounds(std::vector<double>& lower, std::vector<double>& upper) override
+  {
+    lower.assign(2, -1.0);
+    upper.assign(2, 1.0);
+  }
+  int GetOptimumPoint(std::vector<double>& y, std::vector<std::string>& u) const override
+  {
+    y = { 0.25, 0.0 };
+    u.assign(1, "b");
+    return PROBLEM_OK;
+  }
+  double CalculateFunctionals(const std::vector<double>& y, std::vector<std::string>& u, int) override
+  {
+    return (y[0] - 0.25) * (y[0] - 0.25) + y[1] * y[1] + (u[0] == "b" ? 0.0 : 1.0);
+  }
+};
+
+TEST_F(GlobalizerBenchmarksProblemTest, discrete_index_with_more_continuous_variables)
+{
+  FakeTwoContinuousOneDiscrete fake;
+  GlobalizerBenchmarksProblem p(&fake);
+  ASSERT_EQ(p.GetDimension(), 3);
+  EXPECT_EQ(p.GetNumberOfValues(2), 3);
+  EXPECT_EQ(p.GetNumberOfValues(1), -1) << "continuous variable";
+  EXPECT_EQ(p.GetNumberOfValues(3), -1) << "index == dimension is out of range";
+
+  double values[3] = { -1, -1, -1 };
+  ASSERT_EQ(p.GetAllDiscreteValues(2, values), (int)IProblem::OK);
+  EXPECT_DOUBLE_EQ(values[0], 0.0);
+  EXPECT_DOUBLE_EQ(values[1], 1.0);
+  EXPECT_DOUBLE_EQ(values[2], 2.0);
+  EXPECT_EQ(p.GetAllDiscreteValues(3, values), (int)IIntegerProgrammingProblem::ERROR_DISCRETE_VALUE);
+
+  int* index = nullptr;
+  p.ClearCurrentDiscreteValueIndex(&index);
+  double v = -1;
+  EXPECT_EQ(p.GetNextDiscreteValues(index, v, 2, -1), (int)IProblem::OK);
+  EXPECT_DOUBLE_EQ(v, 0.0);
+  EXPECT_EQ(p.GetNextDiscreteValues(index, v, 2), (int)IProblem::OK);
+  EXPECT_DOUBLE_EQ(v, 1.0);
+  EXPECT_EQ(index[0], 1);
+  EXPECT_EQ(p.GetNextDiscreteValues(index, v, 3), (int)IIntegerProgrammingProblem::ERROR_DISCRETE_VALUE);
+  delete[] index;
+
+  double x[3];
+  ASSERT_EQ(p.GetOptimumPoint(x), (int)IGlobalOptimizationProblem::PROBLEM_OK);
+  EXPECT_DOUBLE_EQ(x[2], 1.0);
+  EXPECT_DOUBLE_EQ(p.CalculateFunctionals(x, 0), 0.0);
+}
+
+TEST_F(GlobalizerBenchmarksProblemTest, discrete_value_index_equal_to_count_is_rejected)
+{
+  FakeMixedProblem fake;
+  GlobalizerBenchmarksProblem p(&fake);
+  std::vector<double> y;
+  std::vector<std::string> u;
+  double last[2] = { 0.0, 2.0 };   // "c" — последнее допустимое
+  EXPECT_NO_THROW(p.XtoYU(last, y, u));
+  EXPECT_EQ(u[0], "c");
+  double outside[2] = { 0.0, 3.0 }; // == числу значений
+  EXPECT_ANY_THROW(p.XtoYU(outside, y, u));
+}
+
+TEST_F(GlobalizerBenchmarksProblemTest, solver_handles_two_continuous_one_discrete)
+{
+  // В приложении parameters.Dimension выставляет InitProblemGlobalizerBenchmarks.
+  ResetSolverParameters(3);
+  FakeTwoContinuousOneDiscrete fake;
+  Solver solver(&fake);
+  ASSERT_EQ(solver.Solve(), 0);
+  std::unique_ptr<SolutionResult> res(solver.GetSolutionResult());
+  EXPECT_NEAR(res->GetBestPoint()[2], 1.0, 1e-9);
+  EXPECT_LT(res->GetBestValue(), 0.01);
+  delete solver.GetProblem();
 }
 
 TEST_F(GlobalizerBenchmarksProblemTest, solver_accepts_benchmark_interface)

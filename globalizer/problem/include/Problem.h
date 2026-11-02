@@ -356,7 +356,7 @@ public:
   */
   virtual int GetNumberOfValues(int discreteVariable)
   {
-    if ((discreteVariable > GetDimension()) ||
+    if ((discreteVariable >= GetDimension()) ||
       (discreteVariable < (GetDimension() - GetNumberOfDiscreteVariable())))
       return -1;
     if (mNumberOfValues == 0)
@@ -370,7 +370,7 @@ public:
   */
   virtual int GetAllDiscreteValues(int discreteVariable, double* values)
   {
-    if ((discreteVariable > GetDimension()) ||
+    if ((discreteVariable >= GetDimension()) ||
       (discreteVariable < (GetDimension() - GetNumberOfDiscreteVariable())))
       return IIntegerProgrammingProblem::ERROR_DISCRETE_VALUE;
     int* mCurrentDiscreteValueIndex = 0;
@@ -396,7 +396,7 @@ public:
   */
   virtual int GetNextDiscreteValues(int* mCurrentDiscreteValueIndex, double& value, int discreteVariable, int previousNumber = -2)
   {
-    if ((discreteVariable > GetDimension()) ||
+    if ((discreteVariable >= GetDimension()) ||
       (discreteVariable < (GetDimension() - GetNumberOfDiscreteVariable())) ||
       (mCurrentDiscreteValueIndex == 0) ||
       (mNumberOfValues == 0))
@@ -435,7 +435,7 @@ public:
   /// Проверяет является ли value допустимым значением для параметра с номером discreteVariable
   virtual bool IsPermissibleValue(double value, int discreteVariable)
   {
-    if ((discreteVariable > GetDimension()) ||
+    if ((discreteVariable >= GetDimension()) ||
       (discreteVariable < (GetDimension() - GetNumberOfDiscreteVariable())) ||
       (mNumberOfValues == 0))
       return false;

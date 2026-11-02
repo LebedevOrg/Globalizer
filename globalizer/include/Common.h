@@ -156,9 +156,7 @@ enum ETypeProcess
 enum ETypeSolver
 {
   /// Класический АГП
-  SingleSearch,
-  /// Решателя задач большой размерности
-  HDSearch
+  SingleSearch
 };
 
 ///Тип развертки

@@ -1408,8 +1408,6 @@ void TETypeSolver<Owner>::operator = (std::string data)
 {
   if ((data == "SingleSearch") || (data == "0"))
     *this = SingleSearch;
-  if ((data == "HDSearch") || (data == "2"))
-    *this = HDSearch;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1418,8 +1416,6 @@ template <class Owner>
 TETypeSolver<Owner>::operator std::string()
 {
   std::string s;
-  if (this->mValue == HDSearch)
-    s = "HDSearch";
   if (this->mValue == SingleSearch)
     s = "SingleSearch";
   return s;
@@ -1487,7 +1483,8 @@ void TETypeLocalMethod<Owner>::operator = (std::string data)
     *this = HookeJeeves;
   if ((data == "LeastSquareMethod") || (data == "1"))
     *this = LeastSquareMethod;
-  if ((data == "ParallelHookeJeeves") || (data == "3"))
+  // ParallelHookeJeeves == 2 в ETypeLocalMethod; "3" оставлено для совместимости.
+  if ((data == "ParallelHookeJeeves") || (data == "2") || (data == "3"))
     *this = ParallelHookeJeeves;
 }
 
