@@ -74,6 +74,46 @@ ProblemFromFunctionPointers::ProblemFromFunctionPointers(int dimention, std::vec
   mIsInit = true;
 }
 
+
+// ------------------------------------------------------------------------------------------------
+ProblemFromFunctionPointers::ProblemFromFunctionPointers(int dimention, std::vector<double> lower_, std::vector<double> upper_,
+  std::function<double(const double*, int)> function_, 
+  std::function<void(double* y, int fNumber, int& numPoints, double* values)> functions_,
+  int functionCount_,   bool isSetOptimum_, double optimumValue_, std::vector<double> optimumCoordinate_)
+{
+  mIsInit = false;
+
+  this->mDim = dimention;
+  this->mOwner = this;
+  this->mMinDimension = 1;
+  this->mMaxDimension = 50;
+  this->mNumberOfConstraints = 0;
+  this->mLeftBorder = -1.0;
+  this->mRightBorder = 1.0;
+  this->mNumberOfCriterions = 1;
+  isUseAllFunction = true;
+  allFunction = function_;
+  allFunctions = functions_;
+  lowerBounds = lower_;
+  upperBounds = upper_;
+  isSetOptimum = isSetOptimum_;
+  this->mNumberOfConstraints = functionCount_ - this->mNumberOfCriterions;
+
+  if (isSetOptimum)
+  {
+    optimumValue = optimumValue_;
+    if (optimumCoordinate_.size() != 0)
+    {
+      optimumCoordinate.resize(dimention);
+      for (int i = 0; i < dimention; i++)
+        optimumCoordinate[i] = optimumCoordinate_[i];
+    }
+  }
+
+  BaseProblem<ProblemFromFunctionPointers>::Init(0, 0, false);
+  mIsInit = true;
+}
+
 // Новый конструктор для задач с частично целочисленными
 ProblemFromFunctionPointers::ProblemFromFunctionPointers(int dimension, int numberOfDiscreteVariables_,
 std::vector<double> lower_, std::vector<double> upper_,
@@ -182,4 +222,9 @@ double ProblemFromFunctionPointers::CalculateFunctionals(const double* x, int fN
       throw EXCEPTION("Error function number");
     return functionsOfPriblem[fNumber](x);
   }
+}
+
+void ProblemFromFunctionPointers::CalculateFunctionals(double* y, int fNumber, int& numPoints, double* values)
+{
+  allFunctions(y, fNumber, numPoints, values);
 }

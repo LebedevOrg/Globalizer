@@ -11,6 +11,7 @@ class GLOBALIZER_API ProblemFromFunctionPointers : public Problem<ProblemFromFun
 protected:
   std::vector<std::function<double(const double*)>> functionsOfPriblem;
   std::function<double(const double*, int)> allFunction;
+  std::function<void(double* y, int fNumber, int& numPoints, double* values)> allFunctions;
   bool isUseAllFunction;
 
   double optimumValue = 0;
@@ -28,6 +29,11 @@ public:
     std::function<double(const double*, int)> function_, int functionCount_,
     bool isSetOptimum_ = false, double optimumValue_ = 0, std::vector<double> optimumCoordinate_ = {});
 
+  ProblemFromFunctionPointers(int dimention, std::vector<double> lower_, std::vector<double> upper_,
+    std::function<double(const double*, int)> function_,
+    std::function<void(double* y, int fNumber, int& numPoints, double* values)> functions_,
+    int functionCount_, bool isSetOptimum_ = false, double optimumValue_ = 0, std::vector<double> optimumCoordinate_ = {});
+
   ProblemFromFunctionPointers(int dimension, int numberOfDiscreteVariables_,
     std::vector<double> lower_, std::vector<double> upper_,
     std::vector<int> discreteValues_,
@@ -43,4 +49,8 @@ public:
   virtual void GetBounds(double* lower, double* upper);
 
   virtual double CalculateFunctionals(const double* x, int fNumber);
+
+  virtual void CalculateFunctionals(double* y, int fNumber, int& numPoints,
+    double* values) override;
+
 };

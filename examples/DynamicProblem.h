@@ -151,52 +151,34 @@ public:
   virtual double CalculateFunctionals(const double* y, int fNumber) override
   {
     
-    IntParametersType t = (IntParametersType)(y[0]) * mData;
+    IntParametersType t = (IntParametersType)(y[0]);
     // Для одномерной задачи берём первую координату
     double minVal = 0;
     double minX = 0;
     FunctionalParametersType x = IntToFunctionalParametersType(t + 0);
     double result = Functional(x);
     minVal = result;
-    minX = (double)t / 100.0;
-    for (int i = 1; i < mData; i++)
-    {
-      x = IntToFunctionalParametersType(t + i);
+    minX = (double)t ;
 
-      result = Functional(x);
-      if (result < minVal)
-      {
-        minVal = result;
-        minX = (double)(t + i) / 100.0;
-      }
-    }
 
     return minVal;
   }
 
-  double FinishCalculateFunctionals(double* y, int fNumber)
+  double FinishCalculateFunctionals(double* y, IntParametersType& minT)
   {
 
-    IntParametersType t = (IntParametersType)(y[0]) * mData;
+    IntParametersType t = (IntParametersType)(y[0]) ;
     // Для одномерной задачи берём первую координату
     double minVal = 0;
     double minX = 0;
     FunctionalParametersType x = IntToFunctionalParametersType(t + 0);
     double result = Functional(x);
     minVal = result;
-    minX = (double)t / 100.0;
-    for (int i = 1; i < mData; i++)
-    {
-      x = IntToFunctionalParametersType(t + i);
+    minX = (double)t ;
+    minT = t;
 
-      result = Functional(x);
-      if (result < minVal)
-      {
-        minVal = result;
-        minX = (double)(t + i) / 100.0;
-      }
-    }
     y[0] = minX;
+
     return minVal;
   }
 
@@ -227,27 +209,11 @@ public:
 
     for (size_t j = 0; j < n; ++j)
     {
-      IntParametersType t = (IntParametersType)(y[j]) * mData;
-      double minVal = 0;
-      double minX = 0;
-      FunctionalParametersType x = IntToFunctionalParametersType(t + 0);
+      IntParametersType t = (IntParametersType)(y[j]);
+
+      FunctionalParametersType x = IntToFunctionalParametersType(t);
       double result = Functional(x);
-      minVal = result;
-      minX = (double)t / 100.0;
-
-      for (int i = 1; i < mData; i++)
-      {
-        x = IntToFunctionalParametersType(t + i);
-
-        result = Functional(x);
-        if (result < minVal)
-        {
-          minVal = result;
-          minX = (double)(t + i) / 100.0;
-        }
-      }
-      values[j] = minVal;
-      y[j] = minX;
+      values[j] = result;
     }
   }
     

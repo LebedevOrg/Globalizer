@@ -73,11 +73,6 @@ void CPUMultiPointCalculation::StartCalculate(InformationForCalculation& inputSe
             outputSet.trials[i]->index = -3;
         }
       }
-
-      for (int k = 0; k < dim; k++)
-      {
-        outputSet.trials[i]->y[k] = coordinates[i * dim * k];
-      }
     }
 
     // --- Подсчёт количества вычислений ----------------------------------------

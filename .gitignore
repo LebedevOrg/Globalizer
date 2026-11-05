@@ -1,5 +1,6 @@
 *build*
 *build_64*
+*.idea*
 
 # Build results
 [Dd]ebug/

@@ -62,7 +62,6 @@ Solver::Solver(IProblem* problem)
   pTask = 0;
   pData = 0;
 
-  result = 0;
 
   isExternalTask = false;
 
@@ -668,9 +667,8 @@ IProblem* Solver::GetProblem()
 // ------------------------------------------------------------------------------------------------
 SolutionResult* Solver::GetSolutionResult()  /// best point
 {
-  if (result != 0)
-    delete result;
-  result = new SolutionResult();
+
+  SolutionResult* result = new SolutionResult();
   result->BestTrial = mProcess->GetOptimEstimation()->Clone();
   result->IterationCount = mProcess->GetIterationCount();
   result->TrialCount = mProcess->GetNumberOfTrials();

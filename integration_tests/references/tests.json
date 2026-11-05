@@ -46,7 +46,7 @@
     "optimum": -1.489444,
     "point": [ 0.941176, 0.941176 ],
     "expected_iterations": 721,
-    "tolerance": 0.05,
-    "r": 4.5
+    "tolerance": 0.01,
+    "r": 3.0
   }
 ]

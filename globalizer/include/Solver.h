@@ -44,9 +44,6 @@ protected:
   /// База данных(поисковая информация)
   SearchData* pData;
 
-  /// Результат работы системы
-  SolutionResult* result;
-
   /// Флаг для контроля состояния
   bool m_initialized;
 

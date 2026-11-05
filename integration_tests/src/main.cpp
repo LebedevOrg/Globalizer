@@ -1,4 +1,4 @@
-﻿#include <iostream>
+#include <iostream>
 #include <vector>
 #include <cmath>
 #include <iomanip>
@@ -9,16 +9,18 @@
 
 #include "json.hpp"
 
-#define _GLOBALIZER_BENCHMARKS
+// ПРИМЕЧАНИЕ: макрос _GLOBALIZER_BENCHMARKS задаётся в CMake (add_definitions),
+// поэтому здесь его повторно НЕ определяем — иначе предупреждение C4005.
 
 #include "Globalizer.h"
 #include "Solver.h"
 #include "ProblemInterface.h"
 #include "Parameters.h"
 #include "Trial.h"
-#include "GlobalizerProblem.h" 
-#include "GlobalOptimizationProblemManager.h"
+#ifdef _GLOBALIZER_BENCHMARKS
 #include "IGlobalOptimizationProblem.h"
+#include "GlobalOptimizationProblemManager.h"
+#endif // _GLOBALIZER_BENCHMARKS
 
 using json = nlohmann::json;
 
@@ -126,8 +128,8 @@ bool RunSingleTest(const json& config)
 
         parameters.m = 10;
 
-        parameters.isPrintResultToConsole = false;
-        parameters.disablePrintParameters = true;
+        parameters.IsPrintResultToConsole = false;
+        parameters.DisablePrintParameters = true;
 
         std::string multipliers = "1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 "
             "1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0";
@@ -162,14 +164,12 @@ bool RunSingleTest(const json& config)
         double expectedValue = config["optimum"].get<double>();
         double tolerance = config["tolerance"].get<double>();
 
-        // ВЫВОД ЗНАЧЕНИЙ
         std::cout << "      Value:    Expected " << std::fixed << std::setprecision(6) << expectedValue
             << ", Actual " << actualValue
             << " (Diff: " << std::scientific << std::abs(actualValue - expectedValue) << ")" << std::endl;
 
         if (std::abs(actualValue - expectedValue) > tolerance) passed = false;
 
-        // ВЫВОД КООРДИНАТ
         if (config.contains("point"))
         {
             std::vector<double> expectedPoint = config["point"].get<std::vector<double>>();
@@ -182,7 +182,6 @@ bool RunSingleTest(const json& config)
             if (dist > 0.5) passed = false;
         }
 
-        // ВЫВОД ИТЕРАЦИЙ
         if (config.contains("expected_iterations"))
         {
             int expectedIters = config["expected_iterations"].get<int>();
