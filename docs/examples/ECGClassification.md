@@ -43,5 +43,5 @@ GlobalizerMain.exe -lib iOptProblemSimple.dll -mPyFilePath ..\third_party\Proble
 
 Пример строки запуска системы может иметь следующий вид:
 ```bash
-srun -p p7gpuRTX6000 -w p7n1 -t 600 -N 1 -c 128 --reservation=p7n1 --gres=gpu:8 mpiexec -n 5 ./GlobalizerSampleMain  -lib ..\third_party\Problems\Problems\iOptProblem\ECG_Problems\Classification -functionScriptName ECGClassificationProblem -functionClassName ECGClassificationProblem -MaxNumOfPoints 10 -mPyFilePath ..\third_party\Problems\Problems\iOptProblem\ECG_Problems\Classification -np 4 -nt 4 -TypeCalculation 2 -calculationsArray 2_0
+srun -p p7gpuRTX6000 -w p7n1 -t 600 -N 1 -c 32 --gres=gpu:1 mpiexec -n 5 ./GlobalizerMain  -lib libiOptProblemSimple.so -functionScriptName ECGClassificationProblem -functionClassName ECGClassificationProblem -MaxNumOfPoints 3 -mPyFilePath ../third_party/Problems/Problems/iOptProblem/ECG_Problems/Classification -N 2 -np 4 -nt 4 -TypeCalculation 2 -calculationsArray 2_0
 ```
