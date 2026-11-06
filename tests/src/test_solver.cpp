@@ -564,15 +564,21 @@ TEST_F(SolverTest, serializes_to_dashboard)
 TEST_F(SolverTest, plot_without_python_plotter_prints_warning)
 {
 #ifndef USE_PYTHON
+  // Solver подставляет путь по умолчанию (Globalizer_IterPointsSavePath.txt),
+  // только если пользователь не задавал IterPointsSavePath. Фикстура задаёт
+  // параметры явно (ResetParametersToMethodDefaults), поэтому проверяется
+  // ветка с явно заданным путём: он сохраняется, и точки пишутся в него.
   parameters.IsPlot = true;
+  parameters.IterPointsSavePath = "plot_points.txt";
   problem = MakeParaboloid(2);
   ::testing::internal::CaptureStdout();
   Solver solver(problem);
   auto res = SolveWith(solver);
   std::string out = ::testing::internal::GetCapturedStdout();
   EXPECT_NE(out.find("WITHOUT rendering"), std::string::npos);
-  EXPECT_EQ(parameters.IterPointsSavePath.ToString(), "Globalizer_IterPointsSavePath.txt");
-  parameters.IterPointsSavePath = "";
+  EXPECT_EQ(parameters.IterPointsSavePath.ToString(), "plot_points.txt")
+    << "explicitly set path must not be replaced by the default one";
+  EXPECT_TRUE(workDir->Exists("plot_points.txt"));
 #else
   GTEST_SKIP() << "built with the Python plotter";
 #endif
