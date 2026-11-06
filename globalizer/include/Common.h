@@ -99,7 +99,8 @@ enum ETypeMethod
 {
   StandartMethod,
   IntegerMethod,
-  RSAMethod
+  RSAMethod,
+  MultiCriteriaMethod
 };
 
 enum ESeparableMethodType

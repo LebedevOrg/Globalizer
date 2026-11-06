@@ -16,6 +16,7 @@
 
 #include "CalculationFactory.h"
 
+#include "MCOMethod.h"
 #include "MixedIntegerMethod.h"
 
 
@@ -31,6 +32,8 @@ IMethod* MethodFactory::CreateMethod(Task& _pTask, SearchData& _pData,
     pMethod = new MixedIntegerMethod(_pTask, _pData, _Calculation, _Evolvent);
   if (parameters.TypeMethod == RSAMethod)
       pMethod = new Method_RSA(_pTask, _pData, _Calculation, _Evolvent);
+  if (parameters.TypeMethod == MultiCriteriaMethod)
+    pMethod = new MCOMethod(_pTask, _pData, _Calculation, _Evolvent);
 
 
   return pMethod;
