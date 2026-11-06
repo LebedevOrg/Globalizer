@@ -32,6 +32,7 @@ import re
 import subprocess
 import sys
 import time
+import importlib.machinery
 import importlib.util
 from pathlib import Path
 
@@ -109,8 +110,13 @@ def lib_present(bin_dir, libname):
 
 
 def py_module_available(modname):
+    # Примеры сами добавляют в sys.path каталог задач Globalizer_Benchmarks
+    # (там лежат iOptProblem и iOptProblemSimple), поэтому ищем и в нём.
     try:
-        return importlib.util.find_spec(modname) is not None
+        if importlib.util.find_spec(modname) is not None:
+            return True
+        return importlib.machinery.PathFinder.find_spec(
+            modname, [str(BENCHMARKS_DIR)]) is not None
     except (ImportError, ValueError, ModuleNotFoundError):
         return False
 

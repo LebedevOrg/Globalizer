@@ -63,16 +63,7 @@ int main(int argc, char* argv[])
   problem->Initialize();
 #endif
 
-  ISolver* solver;
-
-  if (SelectSolver(problem))
-  {
-    solver = new Solver(problem);
-  }
-  else
-  {
-    solver = new HDSolver(problem);
-  }
+  ISolver* solver = new Solver(problem);
 
   // Решаем задачу
   if (solver->Solve() != SYSTEM_OK)

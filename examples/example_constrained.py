@@ -1,7 +1,8 @@
 """Пример 3. Задача с ограничением + проверка через validate_problem.
 
-Порядок функций в PYProblem: сначала numCriterions критериев, затем ограничения.
-Здесь: 1 критерий + 1 ограничение (n_constraints = len(_functions) - numCriterions).
+Порядок функций в PYProblem — как в ядре Globalizer: сначала ограничения,
+затем numCriterions критериев (критерий — последняя функция).
+Здесь: 1 ограничение + 1 критерий (n_constraints = len(_functions) - numCriterions).
 
 Критерий:    f(x)  = (x0 - 1)^2 + (x1 - 1)^2      -> минимум в (1, 1)
 Ограничение: g(x)  = x0^2 + x1^2 - 1  <= 0        -> точка обязана лежать в круге R=1
@@ -29,9 +30,11 @@ def main() -> None:
     problem = PYProblem(dimension=2, numCriterions=1)
     problem.set_bounds([-2.0, -2.0], [2.0, 2.0])
 
-    # ВАЖЕН порядок: критерий добавляется первым, ограничение — следом.
-    problem.add_function(lambda x: (x[0] - 1) ** 2 + (x[1] - 1) ** 2, name="objective")
+    # ВАЖЕН порядок: сначала ограничение, критерий — последним.
+    # При обратном порядке решатель считает критерий ограничением (f <= 0)
+    # и не находит ни одной допустимой точки.
     problem.add_function(lambda x: x[0] ** 2 + x[1] ** 2 - 1.0,       name="g_circle")
+    problem.add_function(lambda x: (x[0] - 1) ** 2 + (x[1] - 1) ** 2, name="objective")
 
     # Сначала валидируем без запуска решателя:
     info = PYDGlobalizer.validate_problem(problem)

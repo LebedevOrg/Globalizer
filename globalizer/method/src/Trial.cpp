@@ -178,6 +178,9 @@ Trial& Trial::operator = (const Trial& trial)
     this->lowAndUpPoints = trial.lowAndUpPoints;
     this->TypeColor = trial.TypeColor;
     this->generatedTask = trial.generatedTask;
+    // Как в конструкторе копирования и Clone(): номер итерации переносится,
+    // creationTime остаётся собственным.
+    this->iterationNumber = trial.iterationNumber;
   }
   return *this;
 }

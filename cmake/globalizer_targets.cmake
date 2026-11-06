@@ -147,7 +147,10 @@ function(globalizer_add_example main_filename)
       OUTPUT_NAME_DEBUG   ${_exe_debug}
       OUTPUT_NAME_RELEASE ${_exe_release})
 
-  if (IS_GNU_COMPILER)
+  if (IS_GNU_COMPILER AND MINGW)
+    # В MinGW нет libdl (dlopen под WIN32 не используется).
+    set_target_properties(${_exe} PROPERTIES LINK_FLAGS "-fopenmp")
+  elseif (IS_GNU_COMPILER)
     set_target_properties(${_exe} PROPERTIES LINK_FLAGS "-Wl,--no-as-needed -ldl -fopenmp")
   endif()
 endfunction()

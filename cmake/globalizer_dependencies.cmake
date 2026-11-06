@@ -43,7 +43,22 @@ function(globalizer_configure_mp abi_var)
   endif()
 
   if (GLOBALIZER_USE_MP)
+    # CMakeLists mpfr/mpir рассчитаны только на генератор VS: include-пути и
+    # define-ы заданы в ветках по CMAKE_VS_PLATFORM_NAME. Для MinGW (Ninja/
+    # Makefiles) подставляем имя платформы — переменная видна только в этой
+    # функции и подкаталоге, на остальной проект не влияет.
+    if (MINGW AND NOT CMAKE_VS_PLATFORM_NAME)
+      if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(CMAKE_VS_PLATFORM_NAME x64)
+      else()
+        set(CMAKE_VS_PLATFORM_NAME Win32)
+      endif()
+    endif()
     add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/mpfr_gmp_mpir)
+    if (MINGW AND TARGET mpir)
+      # mpir/version.c без _MSC_VER ждёт VERSION из autotools-config.h.
+      target_compile_definitions(mpir PRIVATE VERSION="3.0.0")
+    endif()
     setup_mpir(_mpir_dir _mpir_lib)
     setup_gmp(_gmp_dir  _gmp_lib)
     setup_mpfr(_mpfr_dir _mpfr_lib)
@@ -82,6 +97,12 @@ function(globalizer_configure_problems abi_var)
   set(_iface "")
 
   if (GLOBALIZER_BUILD_PROBLEMS)
+    if (MINGW)
+      # Задачи компилируются с -fopenmp, но линкуются без него. В Linux .so
+      # допускает неразрешённые символы, а Windows-DLL — нет (GOMP_*).
+      # Переменная функции: действует только на подкаталог Problems.
+      string(APPEND CMAKE_SHARED_LINKER_FLAGS " -fopenmp")
+    endif()
     add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/Problems)
     set(_iface ${PROJECT_SOURCE_DIR}/third_party/Problems/Interface)
 

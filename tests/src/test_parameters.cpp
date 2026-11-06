@@ -287,8 +287,21 @@ TEST_F(ParametersTest, parse_stop_condition)
 ///  -ts задаёт тип решателя
 TEST_F(ParametersTest, parse_type_solver)
 {
-  ReInit({ "app", "-ts", "HDSearch" });
-  ASSERT_EQ(HDSearch, (ETypeSolver)p->TypeSolver);
+  ReInit({ "app", "-ts", "SingleSearch" });
+  ASSERT_EQ(SingleSearch, (ETypeSolver)p->TypeSolver);
+}
+
+/// -tlm: numeric values match ETypeLocalMethod (ParallelHookeJeeves == 2; "3" kept for compatibility)
+TEST_F(ParametersTest, parse_type_local_method)
+{
+  ReInit({ "app", "-tlm", "2" });
+  ASSERT_EQ(ParallelHookeJeeves, (ETypeLocalMethod)p->TypeLocalMethod);
+  ReInit({ "app", "-tlm", "0" });
+  ASSERT_EQ(HookeJeeves, (ETypeLocalMethod)p->TypeLocalMethod);
+  ReInit({ "app", "-tlm", "3" });
+  ASSERT_EQ(ParallelHookeJeeves, (ETypeLocalMethod)p->TypeLocalMethod);
+  ReInit({ "app", "-tlm", "ParallelHookeJeeves" });
+  ASSERT_EQ(ParallelHookeJeeves, (ETypeLocalMethod)p->TypeLocalMethod);
 }
 
 /* ======================================================================== *\

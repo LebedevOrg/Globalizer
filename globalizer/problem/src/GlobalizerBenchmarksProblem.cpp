@@ -50,7 +50,7 @@ void GlobalizerBenchmarksProblem::XtoYU(const double* x, std::vector<double>& y,
   }
   for (int j = 0; j < problem->GetNumberOfDiscreteVariable(); j++, i++)
   {
-    if (x[i] < 0 || x[i] >  DiscreteVariableValues[j].size())
+    if (x[i] < 0 || x[i] >= DiscreteVariableValues[j].size())
       throw - 1;
     else
     {
@@ -180,7 +180,7 @@ GetDimension() возвращает общее число параметров.
 */
 int GlobalizerBenchmarksProblem::GetNumberOfValues(int discreteVariable)
 {
-  if ((discreteVariable > GetDimension()) ||
+  if ((discreteVariable >= GetDimension()) ||
     (discreteVariable < (GetDimension() - GetNumberOfDiscreteVariable())))
     return -1;
   if (mNumberOfValues == 0)
@@ -210,7 +210,7 @@ void GlobalizerBenchmarksProblem::ClearCurrentDiscreteValueIndex(int** mCurrentD
 */
 int GlobalizerBenchmarksProblem::GetAllDiscreteValues(int discreteVariable, double* values)
 {
-  if ((discreteVariable > GetDimension()) ||
+  if ((discreteVariable >= GetDimension()) ||
     (discreteVariable < (GetDimension() - GetNumberOfDiscreteVariable())))
     return IIntegerProgrammingProblem::ERROR_DISCRETE_VALUE;
   int* mCurrentDiscreteValueIndex = 0;
@@ -245,31 +245,31 @@ std::vector<std::vector<std::string>> GlobalizerBenchmarksProblem::GetDiscretesV
 */
 int GlobalizerBenchmarksProblem::GetNextDiscreteValues(int* mCurrentDiscreteValueIndex, double& value, int discreteVariable, int previousNumber)
 {
-  if ((discreteVariable > GetDimension()) ||
+  if ((discreteVariable >= GetDimension()) ||
     (discreteVariable < (GetDimension() - GetNumberOfDiscreteVariable())) ||
     (mCurrentDiscreteValueIndex == 0) ||
     (mNumberOfValues == 0))
     return IIntegerProgrammingProblem::ERROR_DISCRETE_VALUE;
+  // Номер дискретной переменной среди дискретных: они идут после непрерывных.
+  const int di = discreteVariable - (GetDimension() - GetNumberOfDiscreteVariable());
   // если -1 то сбрасываем значение текущего номера
   if (previousNumber == -1)
   {
-    mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()] = 0;
+    mCurrentDiscreteValueIndex[di] = 0;
     value = 0;
     return IProblem::OK;
   }
   else if (previousNumber == -2)
   {
-    mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()]++;
-    value = mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()];
+    mCurrentDiscreteValueIndex[di]++;
+    value = mCurrentDiscreteValueIndex[di];
     return IProblem::OK;
   }
   else
   {
-    mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()] =
-      previousNumber;
-    mCurrentDiscreteValueIndex[discreteVariable - GetNumberOfDiscreteVariable()]++;
-    value = mCurrentDiscreteValueIndex[discreteVariable -
-      GetNumberOfDiscreteVariable()];
+    mCurrentDiscreteValueIndex[di] = previousNumber;
+    mCurrentDiscreteValueIndex[di]++;
+    value = mCurrentDiscreteValueIndex[di];
     return IProblem::OK;
   }
 }

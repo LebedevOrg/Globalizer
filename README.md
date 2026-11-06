@@ -105,6 +105,50 @@ int main(int argc, char* argv[])
 }
 ```
 
+## Python: интерфейс, совместимый с scipy.optimize
+
+Пакет `globalizer.optimize` повторяет функции глобальной оптимизации `scipy.optimize`
+(`differential_evolution`, `dual_annealing`, `shgo`, `direct`, `basinhopping`, `minimize`).
+Чтобы перевести код со scipy на Globalizer, достаточно заменить имя библиотеки:
+
+```python
+from globalizer.optimize import differential_evolution   # вместо scipy.optimize
+
+res = differential_evolution(func, bounds, constraints=..., integrality=...)
+print(res.x, res.fun)
+```
+
+Подробнее: [PYGlobalizer/globalizer/README.md](PYGlobalizer/globalizer/README.md).
+
+## Python: пошаговое решение
+
+`PYDGlobalizer.IterativeSolver` — аналог примера [IterationMain.cpp](examples/IterationMain.cpp):
+итерации выполняются по одной, между ними можно менять данные задачи, смотреть текущий
+результат и решать, продолжать ли поиск.
+
+```python
+import PYDGlobalizer
+from PYProblem import PYProblem
+
+params = PYDGlobalizer.SolverParameters()
+params.stop_condition = "iterations"   # "accuracy" (по умолчанию) или "iterations"
+params.max_iterations = 300
+
+solver = PYDGlobalizer.IterativeSolver(problem, params)   # Solver + Initialize()
+while not solver.do_iteration():                          # DoIteration(finished)
+    ...                                                   # данные задачи можно менять
+print(solver.result())          # best_value, best_point, iterations, trials, feasible, finished
+
+for state in PYDGlobalizer.IterativeSolver(problem, params):   # одна итерация на шаг
+    print(state["iterations"], state["best_value"])
+```
+
+Также есть `run(max_steps=-1)` (несколько итераций подряд), `print_result()` и свойства
+`finished`, `iterations`, `is_active`. Активным может быть только один решатель: `solve()`
+или новый `IterativeSolver` заново инициализируют глобальные параметры Globalizer, после
+чего незавершённый решатель выдаёт `RuntimeError`. Итог завершённого остаётся доступен.
+Пример: [examples/example_iterative.py](examples/example_iterative.py).
+
 # **Примеры**
 Список примеров для подбора параметров архитектуры и обучения нейросетевых моделей:
 - [Классификация сигналов ЭКГ по типу ритма](docs/examples/ECGClassification.md)

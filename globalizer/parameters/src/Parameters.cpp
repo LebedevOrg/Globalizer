@@ -124,8 +124,6 @@ void Parameters::SetDefaultParameters()
   InitOption(LocalVerificationEpsilon, 0.0001, "-lve", "Local Method Accuracy", 1);
   InitOption(LocalVerificationNumPoint, 1, "-lvnp", "The number of iterations of a large-dimensional problem solver", 1);
 
-  InitOption(HDSolverIterationCount, 1, "-hdsic", "local Verification NumPoint", 1);
-
   InitOption(LocalMix, 0, "-lm", "local mix parameter", 1);
   InitOption(LocalAlpha, 15, "-la", "parameter alpha in mixed algorithm", 1);
   InitOption(SepS, Off, "-SepS", "enables separable optimization on start", 1);
