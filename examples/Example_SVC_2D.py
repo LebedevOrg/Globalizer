@@ -71,6 +71,7 @@ def testSVC2D():
         print("x* =", [round(v, 5) for v in result["best_point"]])
     else:
         print("Ошибка:", result.get("error"))
+        sys.exit(1)
 
 
 if __name__ == "__main__":

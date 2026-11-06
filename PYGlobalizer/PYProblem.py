@@ -109,32 +109,56 @@ class PYProblem:
         self.discrete_variable_values = []
         self.discrete_variable_names = []
         self.number_of_discrete_variables = 0
-        
+        # Исходные значения дискретных переменных (могут быть нечисловыми,
+        # например ядро SVC: "rbf", "poly"). Решателю передаются их номера
+        # "0".."k-1", а обёртка calculate переводит номер обратно в значение.
+        self._discrete_labels: List[List[str]] = []
+
         if hasattr(problem, "discrete_variable_values"):
             if not isinstance(problem.discrete_variable_values, list):
                 raise TypeError("discrete_variable_values must be a list")
-            self.discrete_variable_values = problem.discrete_variable_values.copy()
-            
+
             # Валидация структуры
-            for i, vals in enumerate(self.discrete_variable_values):
+            for i, vals in enumerate(problem.discrete_variable_values):
                 if not isinstance(vals, list):
                     raise TypeError(
                         f"discrete_variable_values[{i}] must be a list, got {type(vals)}")
-        
+                if len(vals) == 0:
+                    raise ValueError(f"discrete_variable_values[{i}] is empty")
+            self._discrete_labels = [list(vals) for vals in problem.discrete_variable_values]
+            self.discrete_variable_values = [
+                [str(j) for j in range(len(vals))] for vals in self._discrete_labels]
+
+        self.number_of_discrete_variables = len(self.discrete_variable_values)
+
         if hasattr(problem, "discrete_variable_names"):
             if not isinstance(problem.discrete_variable_names, list):
                 raise TypeError("discrete_variable_names must be a list")
             self.discrete_variable_names = problem.discrete_variable_names.copy()
-        
-        self.number_of_discrete_variables = len(self.discrete_variable_names)
+        if len(self.discrete_variable_names) != self.number_of_discrete_variables:
+            self.discrete_variable_names = [
+                f"d{i}" for i in range(self.number_of_discrete_variables)]
+
         print(f"[PYProblem] Дискретных переменных: {self.number_of_discrete_variables}")
-        
+
         # === РАЗМЕРНОСТЬ ===
-        if hasattr(problem, 'dimension'):
+        # В iOpt dimension — ПОЛНАЯ размерность (непрерывные + дискретные),
+        # число непрерывных — number_of_float_variables.
+        if hasattr(problem, 'number_of_float_variables'):
+            n_continuous = problem.number_of_float_variables
+            if not isinstance(n_continuous, int) or n_continuous < 0:
+                raise ValueError(
+                    f"problem.number_of_float_variables must be non-negative integer, "
+                    f"got {n_continuous}")
+        elif hasattr(problem, 'dimension'):
             if not isinstance(problem.dimension, int) or problem.dimension <= 0:
                 raise ValueError(
                     f"problem.dimension must be positive integer, got {problem.dimension}")
-            n_continuous = problem.dimension
+            n_continuous = problem.dimension - self.number_of_discrete_variables
+            if n_continuous < 0:
+                raise ValueError(
+                    f"problem.dimension ({problem.dimension}) < number of discrete "
+                    f"variables ({self.number_of_discrete_variables})")
         else:
             n_continuous = 2
             print("[PYProblem] WARNING: dimension not found, using default=2")
@@ -173,7 +197,11 @@ class PYProblem:
             if len(lower_bounds) != len(upper_bounds):
                 raise ValueError(
                     f"Bounds size mismatch: lower={len(lower_bounds)}, upper={len(upper_bounds)}")
-            
+            if len(lower_bounds) < n_continuous:
+                raise ValueError(
+                    f"Bounds are given for {len(lower_bounds)} variables, "
+                    f"but problem has {n_continuous} continuous variables")
+
             for i, (l, u) in enumerate(zip(lower_bounds, upper_bounds)):
                 if not isinstance(l, (int, float)) or not isinstance(u, (int, float)):
                     raise TypeError(f"Bounds at index {i} must be numeric")
@@ -206,7 +234,8 @@ class PYProblem:
         # Создаём ОДИН экземпляр для переиспользования
         reusable_point = Point()
         reusable_fval = FunctionValue()
-        
+        discrete_labels = self._discrete_labels
+
         def wrapped_calculate(x: List[float]) -> float:
             """
             Оптимизированная обёртка для вызова problem.calculate
@@ -218,15 +247,16 @@ class PYProblem:
                 float_vars = x[:n_cont]
                 discrete_indices = x[n_cont:]
                 
-                # Преобразуем индексы в строковые значения
+                # Решатель передаёт номер значения (0..k-1) — переводим его
+                # в исходное значение дискретной переменной задачи.
                 discrete_str: List[str] = []
                 for i, idx in enumerate(discrete_indices):
                     idx_int = int(round(idx))
-                    
-                    if i < len(self.discrete_variable_values):
-                        max_idx = len(self.discrete_variable_values[i]) - 1
+
+                    if i < len(discrete_labels):
+                        max_idx = len(discrete_labels[i]) - 1
                         idx_int = max(0, min(idx_int, max_idx))
-                        discrete_str.append(self.discrete_variable_values[i][idx_int])
+                        discrete_str.append(discrete_labels[i][idx_int])
                     else:
                         discrete_str.append(str(idx_int))
             else:
