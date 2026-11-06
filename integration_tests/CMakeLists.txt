@@ -142,6 +142,14 @@ if (GLOBALIZER_PYBIND_VERSION)
   set_tests_properties(python_scipy_interface PROPERTIES TIMEOUT 600
     ENVIRONMENT "GLOBALIZER_BIN=${GLOBALIZER_OUTPUT_DIRECTORY}")
   list(APPEND _integration_tests python_scipy_interface)
+
+  # Пошаговая работа PYDGlobalizer.IterativeSolver (аналог IterationMain.cpp).
+  add_test(NAME python_iterative_solver
+    COMMAND ${_scipy_iface_py} ${CMAKE_CURRENT_SOURCE_DIR}/test_pyd_iterative.py
+    WORKING_DIRECTORY ${GLOBALIZER_TEST_WORKDIR})
+  set_tests_properties(python_iterative_solver PROPERTIES TIMEOUT 600
+    ENVIRONMENT "GLOBALIZER_BIN=${GLOBALIZER_OUTPUT_DIRECTORY}")
+  list(APPEND _integration_tests python_iterative_solver)
 endif()
 
 set(GLOBALIZER_CPP_EXAMPLES
