@@ -141,7 +141,9 @@ enum ETypeCalculation
   /// MPI Вычислитель - Intel oneAPI вычислитель
   OneApi,
   /// Вычислитель на центральном процессоре с групповой обработкой точек
-  CPUMultiPoint
+  CPUMultiPoint,
+  /// Гибридный вычислитель
+  HybridLocalCalc
 };
 
 enum ETypeProcess
