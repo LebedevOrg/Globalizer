@@ -105,6 +105,21 @@ int main(int argc, char* argv[])
 }
 ```
 
+## Python: интерфейс, совместимый с scipy.optimize
+
+Пакет `globalizer.optimize` повторяет функции глобальной оптимизации `scipy.optimize`
+(`differential_evolution`, `dual_annealing`, `shgo`, `direct`, `basinhopping`, `minimize`).
+Чтобы перевести код со scipy на Globalizer, достаточно заменить имя библиотеки:
+
+```python
+from globalizer.optimize import differential_evolution   # вместо scipy.optimize
+
+res = differential_evolution(func, bounds, constraints=..., integrality=...)
+print(res.x, res.fun)
+```
+
+Подробнее: [PYGlobalizer/globalizer/README.md](PYGlobalizer/globalizer/README.md).
+
 # **Примеры**
 Список примеров для подбора параметров архитектуры и обучения нейросетевых моделей:
 - [Классификация сигналов ЭКГ по типу ритма](docs/examples/ECGClassification.md)

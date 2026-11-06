@@ -79,6 +79,8 @@ struct SolverParameters
   bool   local_refine = false;
   int    local_iterations = 100;   // число итераций локального метода
   int    verbose = 1;              // 0=silent 1=error 2=info 3=debug
+  bool   print_result = true;      // печать итогов решателя в консоль (-isPRC)
+  std::string log_prefix = "";     // префикс файлов журнала ("" - по умолчанию, в текущей папке)
 
   void validate() const {
     if (max_iterations < 10 || max_iterations > 10000000)
@@ -105,7 +107,9 @@ struct SolverParameters
       ", epsilon=" + std::to_string(epsilon) +
       ", local_refine=" + (local_refine ? "True" : "False") +
       ", local_iterations=" + std::to_string(local_iterations) +
-      ", verbose=" + std::to_string(verbose) + ")";
+      ", verbose=" + std::to_string(verbose) +
+      ", print_result=" + (print_result ? "True" : "False") +
+      ", log_prefix='" + log_prefix + "')";
   }
 };
 
@@ -163,6 +167,7 @@ static void apply_parameters(const SolverParameters& params)
   parameters.NumPoints = params.num_threads;
   parameters.NumThread = params.num_threads;
   parameters.Epsilon = params.epsilon;
+  parameters.IsPrintResultToConsole = params.print_result;
 
   if (params.local_refine) {
     parameters.LocalRefineSolution = (ELocalMethodScheme)1;
@@ -228,7 +233,7 @@ py::dict solve(py::object problem, SolverParameters params = SolverParameters())
       << " r=" << params.r << " threads=" << params.num_threads);
 
     ensure_pyproblem(problem);
-    GlobalizerInitialization(0, nullptr, false, false);
+    GlobalizerInitialization(0, nullptr, false, false, params.log_prefix);
     apply_parameters(params);
 
     std::unique_ptr<IProblem> problem_ptr;
@@ -309,6 +314,11 @@ PYBIND11_MODULE(PYDGlobalizer, m)
                 Iterations of the local method (default: 100).
             verbose : int
                 Log level: 0=silent 1=error 2=info 3=debug (default: 1).
+            print_result : bool
+                Print the solver summary to the console (default: True).
+            log_prefix : str
+                Prefix (may include a directory) of the solver log files;
+                empty - default name in the current directory (default: "").
         )pbdoc")
     .def(py::init<>())
     .def_readwrite("max_iterations", &SolverParameters::max_iterations)
@@ -318,6 +328,8 @@ PYBIND11_MODULE(PYDGlobalizer, m)
     .def_readwrite("local_refine", &SolverParameters::local_refine)
     .def_readwrite("local_iterations", &SolverParameters::local_iterations)
     .def_readwrite("verbose", &SolverParameters::verbose)
+    .def_readwrite("print_result", &SolverParameters::print_result)
+    .def_readwrite("log_prefix", &SolverParameters::log_prefix)
     .def("validate", &SolverParameters::validate, "Validate parameter values.")
     .def("__repr__", &SolverParameters::repr);
 

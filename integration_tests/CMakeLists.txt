@@ -127,6 +127,23 @@ add_test(NAME examples_python
   WORKING_DIRECTORY ${GLOBALIZER_TEST_WORKDIR})
 set_tests_properties(examples_python PROPERTIES TIMEOUT 3600)
 
+# Интерфейс globalizer.optimize, совместимый с scipy.optimize (нужен модуль
+# PYDGlobalizer, т.е. сборка с GLOBALIZER_PYBIND_VERSION=ON).
+if (GLOBALIZER_PYBIND_VERSION)
+  # Интерпретатор - тот, под который собран модуль (его версия в имени .pyd).
+  if (Python_EXECUTABLE)
+    set(_scipy_iface_py ${Python_EXECUTABLE})
+  else()
+    set(_scipy_iface_py ${GLOBALIZER_PY})
+  endif()
+  add_test(NAME python_scipy_interface
+    COMMAND ${_scipy_iface_py} ${CMAKE_CURRENT_SOURCE_DIR}/test_globalizer_optimize.py
+    WORKING_DIRECTORY ${GLOBALIZER_TEST_WORKDIR})
+  set_tests_properties(python_scipy_interface PROPERTIES TIMEOUT 600
+    ENVIRONMENT "GLOBALIZER_BIN=${GLOBALIZER_OUTPUT_DIRECTORY}")
+  list(APPEND _integration_tests python_scipy_interface)
+endif()
+
 set(GLOBALIZER_CPP_EXAMPLES
   SimpleMain
   ConstraintsIterationMain
