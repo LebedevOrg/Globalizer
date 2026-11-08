@@ -1201,6 +1201,8 @@ void TETypeMethod<Owner>::operator = (std::string data)
     *this = IntegerMethod;
   if ((data == "RSAMethod") || (data == "2"))
       *this = RSAMethod;
+  if (data == "MultiCriteriaMethod")
+    *this = MultiCriteriaMethod;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1215,6 +1217,8 @@ TETypeMethod<Owner>::operator std::string()
     s = "IntegerMethod";
   if (this->mValue == RSAMethod)
       s = "RSAMethod";
+  if (this->mValue == MultiCriteriaMethod)
+    s = "MultiCriteriaMethod";
   return s;
 }
 
