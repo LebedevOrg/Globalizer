@@ -179,6 +179,13 @@ void Parameters::SetDefaultParameters()
 
   InitOption(IterationsCount, 1000000, "-IC", "The maximum number of iterations of the optimization algorithm, used in automatic mode.", 1);
 
+  // === ПАРАМЕТРЫ ГИБРИДНОГО ВЫЧИСЛЕНИЯ ===
+  // 0 означает пустой массив по умолчанию
+  InitOption(LocalVarIndices, 0, "-lvi", "Indices of variables for local search (0-based, e.g., 2_3_4), 0 means none", 0);
+  InitOption(HybridLocalTolerance, 1e-5, "-hlt", "Tolerance for hybrid local search", 1);
+  InitOption(HybridLocalMaxIter, 50, "-hlmi", "Max iterations for hybrid local search", 1);
+  InitOption(HybridLocalStep, 0.1, "-hls", "Initial step size for hybrid local search", 1);
+
 
 
   ProcRank.SetGetter(&Parameters::GetProcRank);

@@ -20,6 +20,7 @@
 #include "MPICalculation.h"
 #include "CudaCalculation.h"
 #include "CPUMultiPointCalculation.h"
+#include "HybridLocalCalculation.h"
 
 
 // ------------------------------------------------------------------------------------------------
@@ -49,6 +50,10 @@ Calculation* CalculationFactory::CreateCalculation(Task& _pTask, IEvolvent* evol
     else if (parameters.TypeCalculation == AsyncMPI)
     {
       calculation = new MPICalculationAsync(_pTask);
+    }
+    else if (parameters.TypeCalculation == HybridLocalCalc)
+    {
+        calculation = new HybridLocalCalculation(_pTask);
     }
     else
     {

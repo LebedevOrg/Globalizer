@@ -1352,6 +1352,8 @@ void TETypeCalculation<Owner>::operator = (std::string data)
     *this = OneApi;
   if ((data == "CPUMultiPoint") || (data == "5"))
     *this = CPUMultiPoint;
+  if ((data == "HybridLocalCalc") || (data == "6"))
+    *this = HybridLocalCalc;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1372,6 +1374,8 @@ TETypeCalculation<Owner>::operator std::string()
     s = "OneApi";
   if (this->mValue == CPUMultiPoint)
     s = "CPUMultiPoint";
+  if (this->mValue == HybridLocalCalc)
+      s = "HybridLocalCalc";
   return s;
 }
 
