@@ -31,7 +31,7 @@ Six-hump camel, Rastrigin, Ackley, Rosenbrock, Hartmann 3D/6D, Shekel),
   python examples/compare_optimizers.py --quick             # 100 300, 3 зерна
   python examples/compare_optimizers.py --budgets 200 --seeds 3 --problems branin g08
   python examples/compare_optimizers.py --out results_dir   # куда писать report.md и results.csv
-Нужны scipy и optuna (CMA-ES - если установлен cmaes).
+Нужны scipy и optuna (CMA-ES - если установлен cmaes): pip install -r requirements_compare.txt
 """
 
 import argparse
@@ -63,7 +63,7 @@ try:
     import scipy.optimize as sopt             # noqa: E402
 except ImportError as _exc:
     print(f"[SKIP] the comparison needs scipy and optuna: {_exc} "
-          "(pip install scipy optuna cmaes)")
+          "(pip install -r requirements_compare.txt)")
     sys.exit(77)
 
 optuna.logging.set_verbosity(optuna.logging.ERROR)

@@ -1,0 +1,29 @@
+# ============================================================
+# requirements_compare.txt - зависимости для СРАВНЕНИЯ Globalizer
+# с другими библиотеками оптимизации. Для сборки и работы Globalizer
+# (в том числе интерфейсов globalizer.optimize и globalizer.optuna)
+# они НЕ нужны.
+#
+# Используются в:
+#   examples/compare_optimizers.py          - Globalizer vs scipy.optimize vs Optuna;
+#   examples/example_optuna_interface.py optuna, examples/example_optuna_ml.py optuna
+#                                           - те же задачи решает Optuna;
+#   integration_tests/test_globalizer_optuna.py,
+#   integration_tests/test_globalizer_optimize.py
+#                                           - проверки совместимости с Optuna/scipy
+#                                             (без этих пакетов пропускаются).
+#
+# Установка:  pip install -r requirements_compare.txt
+# (ставят gen/BuildTestAndOpenVS.bat и gen/build_test_and_open.sh - они
+#  запускают все тесты, включая тесты сравнения).
+# ============================================================
+
+# Конкуренты в сравнении.
+scipy>=1.10,<2
+optuna>=4,<6
+
+# CmaEsSampler в Optuna (без него Optuna-CMA в сравнении пропускается).
+cmaes>=0.10
+
+# examples/example_optuna_ml.py (подбор гиперпараметров моделей).
+scikit-learn>=1.2,<2

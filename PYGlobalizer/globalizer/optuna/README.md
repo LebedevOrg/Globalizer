@@ -33,7 +33,8 @@ print(study.best_params, study.best_value)
    Модуль `PYDGlobalizer` пакет найдёт сам в `_bin`, либо укажите его папку
    в переменной окружения `GLOBALIZER_BIN`.
 
-Зависимость одна — `numpy`. Сама Optuna не нужна.
+Зависимость одна — `numpy`. Сама Optuna не нужна. Для сравнения с scipy и Optuna
+и проверок совместимости: `pip install -r requirements_compare.txt`.
 
 ## Что поддерживается
 

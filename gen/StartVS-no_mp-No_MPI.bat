@@ -61,7 +61,8 @@ echo.
 echo ========================================
 echo [3/6] Installing Python packages...
 echo ========================================
-call pip install -r ..\requirements.txt
+REM requirements.txt - Globalizer libraries; iOptProblemSimple - the problem built below (-DiOptProblemSimple_build=ON).
+call pip install -r ..\requirements.txt -r ..\third_party\Problems\Problems\iOptProblemSimple\requirements.txt
 if %errorlevel% neq 0 (
     echo [WARNING] Some packages may have failed to install. Continuing...
 )
