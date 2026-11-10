@@ -36,3 +36,10 @@ scikit-learn>=1.2,<2   ; python_version >= "3.9"
 # Нужен ТОЛЬКО при сборке PYGlobalizer (флаг -DPYGlobalizer=ON).
 # Если pybind11 подключён как submodule/через CMake — строку можно закомментировать.
 pybind11>=2.11,<3
+
+# ---------- Сравнение с scipy / Optuna (examples/compare_optimizers.py) ----------
+# Сам интерфейс globalizer.optuna Optuna НЕ требует; она нужна только для
+# сравнения и проверки совместимости (integration_tests/test_globalizer_optuna.py).
+# cmaes - для CmaEsSampler в сравнении.
+optuna>=4,<6
+cmaes>=0.10

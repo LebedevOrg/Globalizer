@@ -84,11 +84,18 @@ struct SolverParameters
   /// Критерий остановки: "accuracy" - по точности epsilon (по умолчанию),
   /// "iterations" - только по max_iterations (IterationOnly, как в IterationMain.cpp).
   std::string stop_condition = "accuracy";
+  /// Когда запускать локальный метод (при local_refine=True):
+  /// "final" - один раз после глобального поиска (FinalStart, по умолчанию),
+  /// "updated" - при каждом улучшении оценки минимума (UpdatedMinimum).
+  std::string local_refine_mode = "final";
 
   void validate() const {
     if (stop_condition != "accuracy" && stop_condition != "iterations")
       throw std::invalid_argument("stop_condition must be 'accuracy' or 'iterations', got '"
         + stop_condition + "'");
+    if (local_refine_mode != "final" && local_refine_mode != "updated")
+      throw std::invalid_argument("local_refine_mode must be 'final' or 'updated', got '"
+        + local_refine_mode + "'");
     if (max_iterations < 10 || max_iterations > 10000000)
       throw std::invalid_argument("max_iterations must be in [10, 10000000], got "
         + std::to_string(max_iterations));
@@ -116,7 +123,8 @@ struct SolverParameters
       ", verbose=" + std::to_string(verbose) +
       ", print_result=" + (print_result ? "True" : "False") +
       ", log_prefix='" + log_prefix + "'" +
-      ", stop_condition='" + stop_condition + "')";
+      ", stop_condition='" + stop_condition + "'" +
+      ", local_refine_mode='" + local_refine_mode + "')";
   }
 };
 
@@ -185,7 +193,8 @@ static void apply_parameters(const SolverParameters& params)
   parameters.StopCondition = (params.stop_condition == "iterations") ? IterationOnly : Accuracy;
 
   if (params.local_refine) {
-    parameters.LocalRefineSolution = (ELocalMethodScheme)1;
+    parameters.LocalRefineSolution =
+      (params.local_refine_mode == "updated") ? UpdatedMinimum : FinalStart;
     parameters.TypeLocalMethod = (ETypeLocalMethod)0;
     parameters.LocalIteration = params.local_iterations;
     parameters.LocalVerificationEpsilon = params.epsilon * 0.1;
@@ -500,6 +509,10 @@ PYBIND11_MODULE(PYDGlobalizer, m)
             stop_condition : str
                 "accuracy" - stop when epsilon is reached (default);
                 "iterations" - stop only after max_iterations.
+            local_refine_mode : str
+                When local_refine is on: "final" - run the local method once
+                after the global search (default); "updated" - run it every
+                time the minimum estimate improves.
         )pbdoc")
     .def(py::init<>())
     .def_readwrite("max_iterations", &SolverParameters::max_iterations)
@@ -512,6 +525,7 @@ PYBIND11_MODULE(PYDGlobalizer, m)
     .def_readwrite("print_result", &SolverParameters::print_result)
     .def_readwrite("log_prefix", &SolverParameters::log_prefix)
     .def_readwrite("stop_condition", &SolverParameters::stop_condition)
+    .def_readwrite("local_refine_mode", &SolverParameters::local_refine_mode)
     .def("validate", &SolverParameters::validate, "Validate parameter values.")
     .def("__repr__", &SolverParameters::repr);
 

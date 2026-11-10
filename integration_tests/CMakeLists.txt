@@ -150,6 +150,27 @@ if (GLOBALIZER_PYBIND_VERSION)
   set_tests_properties(python_iterative_solver PROPERTIES TIMEOUT 600
     ENVIRONMENT "GLOBALIZER_BIN=${GLOBALIZER_OUTPUT_DIRECTORY}")
   list(APPEND _integration_tests python_iterative_solver)
+
+  # Интерфейс globalizer.optuna, совместимый с Optuna (сама Optuna не нужна;
+  # если она установлена, проверяется ещё и совместимость сигнатур).
+  add_test(NAME python_optuna_interface
+    COMMAND ${_scipy_iface_py} ${CMAKE_CURRENT_SOURCE_DIR}/test_globalizer_optuna.py
+    WORKING_DIRECTORY ${GLOBALIZER_TEST_WORKDIR})
+  set_tests_properties(python_optuna_interface PROPERTIES TIMEOUT 600
+    ENVIRONMENT "GLOBALIZER_BIN=${GLOBALIZER_OUTPUT_DIRECTORY}")
+  list(APPEND _integration_tests python_optuna_interface)
+
+  # Короткий прогон сравнения Globalizer / scipy / Optuna (examples/compare_optimizers.py).
+  # Без scipy или optuna скрипт возвращает 77 - тест помечается пропущенным.
+  add_test(NAME python_optimizer_comparison_smoke
+    COMMAND ${_scipy_iface_py} ${CMAKE_SOURCE_DIR}/examples/compare_optimizers.py
+            --budgets 60 --seeds 1 --problems branin circle mixed3 --quiet
+            --out ${CMAKE_CURRENT_BINARY_DIR}/comparison_smoke
+    WORKING_DIRECTORY ${GLOBALIZER_TEST_WORKDIR})
+  set_tests_properties(python_optimizer_comparison_smoke PROPERTIES TIMEOUT 600
+    SKIP_RETURN_CODE 77
+    ENVIRONMENT "GLOBALIZER_BIN=${GLOBALIZER_OUTPUT_DIRECTORY}")
+  list(APPEND _integration_tests python_optimizer_comparison_smoke)
 endif()
 
 set(GLOBALIZER_CPP_EXAMPLES

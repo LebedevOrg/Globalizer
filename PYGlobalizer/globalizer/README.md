@@ -102,3 +102,10 @@ res = opt.differential_evolution(f, bounds, globalizer_options={"maxfev": 5000})
   ответов со scipy. В CTest: `python_scipy_interface`.
 - `examples/example_scipy_interface.py` — пример; с аргументом `scipy` те же
   задачи решает scipy.
+
+## См. также
+
+- [optuna/README.md](optuna/README.md) — `globalizer.optuna`, интерфейс в стиле
+  Optuna (`import globalizer.optuna as optuna`).
+- `examples/compare_optimizers.py` — сравнение Globalizer, scipy.optimize и
+  Optuna на общих тестовых задачах.
