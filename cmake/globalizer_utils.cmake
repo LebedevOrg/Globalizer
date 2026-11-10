@@ -123,7 +123,7 @@ macro(print_build_config)
   message("Build type: " ${CMAKE_BUILD_TYPE})
   message("Target arch: " ${GLOBALIZER_TARGET_ARCH})
 
-  get_directory_property( DirDefs DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
+  get_directory_property( DirDefs DIRECTORY ${GLOBALIZER_ROOT_DIR} COMPILE_DEFINITIONS)
   message( "Compile time definitions: " ${DirDefs})
 
 endmacro()
