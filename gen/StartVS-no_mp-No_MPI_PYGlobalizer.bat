@@ -97,8 +97,8 @@ echo ========================================
 echo [3/7] Python packages
 echo ========================================
 "%PY_EXE%" -m pip install --upgrade pip
+REM Building the Python interface (PYDGlobalizer) needs only requirements_build.txt.
 set "REQ_FILE=%ROOT_DIR%\requirements_build.txt"
-if not exist "%REQ_FILE%" set "REQ_FILE=%ROOT_DIR%\requirements.txt"
 echo Using "%REQ_FILE%"
 "%PY_EXE%" -m pip install -r "%REQ_FILE%"
 if errorlevel 1 (
@@ -222,7 +222,10 @@ echo ========================================
 echo Run with:
 echo   conda activate "%ENV_DIR%"
 echo   cd /d "%ROOT_DIR%"
-echo   python examples\Example_simple.py
+echo   python examples\example_scipy_interface.py
+echo   python examples\example_optuna_interface.py
+echo Example_simple.py additionally needs:
+echo   pip install -r requirements.txt -r third_party\Problems\Problems\iOptProblemSimple\requirements.txt
 echo Python C++ module name: %PY_MODULE%
 cd /d "%START_DIR%"
 endlocal

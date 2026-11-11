@@ -11,9 +11,11 @@ REM    - pybind11 target PYDGlobalizer, Ninja + gcc/g++
 REM
 REM  Differences from the VS script:
 REM    * generator Ninja (or "MinGW Makefiles") instead of Visual Studio;
-REM    * the module is always built (there is no .sln to open);
-REM    * requirements.txt is installed (it also contains scikit-learn,
-REM      needed by examples\Example_SVC_2D.py / Example_SVC_3D.py).
+REM    * the module is always built (there is no .sln to open).
+REM
+REM  Only requirements_build.txt is installed (what the build needs: pybind11,
+REM  numpy). Examples that use plots or third-party problems need more, e.g.
+REM  Example_simple.py: requirements.txt + iOptProblemSimple\requirements.txt.
 REM
 REM  Build dir: build_gcc_64_py, result: _bin\PYDGlobalizer.cp<ver>-win_amd64.pyd
 REM  GCC: environment variable GCC_DIR (folder with gcc.exe),
@@ -101,8 +103,8 @@ echo ========================================
 echo [3/7] Python packages
 echo ========================================
 "%PY_EXE%" -m pip install --upgrade pip
-set "REQ_FILE=%ROOT_DIR%\requirements.txt"
-if not exist "%REQ_FILE%" set "REQ_FILE=%ROOT_DIR%\requirements_build.txt"
+REM Building the Python interface (PYDGlobalizer) needs only requirements_build.txt.
+set "REQ_FILE=%ROOT_DIR%\requirements_build.txt"
 echo Using "%REQ_FILE%"
 "%PY_EXE%" -m pip install -r "%REQ_FILE%"
 if errorlevel 1 (
@@ -217,8 +219,10 @@ echo ========================================
 echo Run with:
 echo   conda activate "%ENV_DIR%"
 echo   cd /d "%ROOT_DIR%"
-echo   python examples\Example_simple.py
-echo   python examples\Example_SVC_2D.py
+echo   python examples\example_scipy_interface.py
+echo   python examples\example_optuna_interface.py
+echo Example_simple.py / Example_SVC_2D.py additionally need:
+echo   pip install -r requirements.txt -r third_party\Problems\Problems\iOptProblemSimple\requirements.txt
 echo Python C++ module name: %PY_MODULE%
 cd /d "%START_DIR%"
 endlocal

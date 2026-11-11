@@ -32,7 +32,7 @@ endfunction()
 # ---------------------------------------------------------------------------
 macro(globalizer_setup_compiler_flags)
   if (IS_GNU_COMPILER)
-    include(${CMAKE_SOURCE_DIR}/cmake/GMPConfig.cmake)
+    include(${GLOBALIZER_ROOT_DIR}/cmake/GMPConfig.cmake)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
     find_program(CCACHE_FOUND ccache)
     if(CCACHE_FOUND)

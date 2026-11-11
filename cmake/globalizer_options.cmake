@@ -48,11 +48,13 @@ set(GLOBALIZER_LIB_NAME_DEBUG          ${GLOBALIZER_EXECUTABLE_NAME}_l_${GLOBALI
 set(GLOBALIZER_PYD_NAME                PYDGlobalizer)
 
 # --- Каталоги исходников -----------------------------------------------------
-# Используем CMAKE_SOURCE_DIR, а не PROJECT_SOURCE_DIR: этот модуль
-# подключается ДО project(), когда PROJECT_SOURCE_DIR ещё пуст. На верхнем
-# уровне CMAKE_SOURCE_DIR указывает на корень репозитория и доступен сразу.
-set(GLOBALIZER_EXAMPLES_SRC_DIR  ${CMAKE_SOURCE_DIR}/examples)
-set(GLOBALIZER_COMMON_SRC_DIR    ${CMAKE_SOURCE_DIR}/globalizer)
+# Корень Globalizer - каталог над cmake/ (этот модуль подключается из корневого
+# CMakeLists). Не CMAKE_SOURCE_DIR: Globalizer может быть подключён в другой
+# проект через add_subdirectory(), и тогда CMAKE_SOURCE_DIR - корень того
+# проекта. Не PROJECT_SOURCE_DIR: модуль подключается ДО project().
+get_filename_component(GLOBALIZER_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+set(GLOBALIZER_EXAMPLES_SRC_DIR  ${GLOBALIZER_ROOT_DIR}/examples)
+set(GLOBALIZER_COMMON_SRC_DIR    ${GLOBALIZER_ROOT_DIR}/globalizer)
 set(GLOBALIZER_PARAMETERS_DIR    ${GLOBALIZER_COMMON_SRC_DIR}/parameters)
 set(GLOBALIZER_evolvent_DIR      ${GLOBALIZER_COMMON_SRC_DIR}/evolvent)
 set(GLOBALIZER_extended_DIR      ${GLOBALIZER_COMMON_SRC_DIR}/extended)

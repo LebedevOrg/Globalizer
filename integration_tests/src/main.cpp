@@ -16,6 +16,8 @@
 //         оптимума не более чем на eps*(b-a) ("point_eps");
 //       * число испытаний совпадает с эталоном ("trials", "trials_delta");
 //       * при необходимости — значение функции ("optimum", "value_tolerance").
+//     "requires_mpfr": true — случаю нужна расширенная точность (сборка с
+//     GLOBALIZER_USE_MP=ON); в сборке без MPFR он пропускается (SKIP).
 //
 //  Запуск:
 //    Globalizer_IntegrationTests [file.json] [--group G] [--filter S]
@@ -529,6 +531,20 @@ void InitParameters(const std::vector<std::string>& args)
 RunResult SolveCase(const json& c, int index, std::vector<std::string> args, Outcome& outcome, std::string& skip)
 {
   RunResult r;
+
+  // Случаю нужна расширенная точность Extended (MPFR): при m*N > 52 бит
+  // развёртки double не различает соседние точки [0,1], новые испытания
+  // совпадают с уже имеющимися и отбрасываются (SearchData::InsertPoint),
+  // поэтому число испытаний и результат не сравнимы с эталоном.
+#ifdef NO_MPREAL
+  if (c.value("requires_mpfr", false))
+  {
+    outcome = Outcome::Skip;
+    skip = "needs extended precision (MPFR): built with GLOBALIZER_USE_MP=OFF";
+    return r;
+  }
+#endif
+
   InitParameters(args);
 
   const json& p = c.at("problem");
