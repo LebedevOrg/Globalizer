@@ -32,11 +32,17 @@ endfunction()
 # ---------------------------------------------------------------------------
 macro(globalizer_setup_compiler_flags)
   if (IS_GNU_COMPILER)
-    include(${CMAKE_SOURCE_DIR}/cmake/GMPConfig.cmake)
+    include(${GLOBALIZER_ROOT_DIR}/cmake/GMPConfig.cmake)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
     find_program(CCACHE_FOUND ccache)
     if(CCACHE_FOUND)
       set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+    endif()
+    if (MINGW)
+      # MinGW + строгий -std=c++17 (его ставят подпроекты Problems) не
+      # определяет макрос WIN32 (только _WIN32), а код проверяет #ifdef WIN32.
+      # Генератор VS добавляет /DWIN32 /D_WINDOWS всегда — делаем так же.
+      add_definitions(-DWIN32 -D_WINDOWS)
     endif()
   elseif (IS_MICROSOFT_COMPILER)
     add_definitions(/EHsc -D_CRT_SECURE_NO_WARNINGS -DNOMINMAX)

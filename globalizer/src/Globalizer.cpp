@@ -94,30 +94,10 @@ SolutionResult* GlobalizerSolveProblem(IProblem*& problem)
     parameters.NumPoints = parameters.NumThread;
   }
 
-  int iterationByDimention = parameters.IterationsCount / parameters.Dimension;
-  if (!IsBelowGraph(parameters.Dimension, parameters.IterationsCount))
-  {
-    if (parameters.IterationsCount.GetIsChange() || !(parameters.MaxNumOfPoints.GetIsChange()))
-      parameters.MaxNumOfPoints = parameters.IterationsCount;
+  if (parameters.IterationsCount.GetIsChange() || !(parameters.MaxNumOfPoints.GetIsChange()))
+    parameters.MaxNumOfPoints = parameters.IterationsCount;
 
-    solver = new Solver(problem);
-  }
-  else
-  {
-    int C = parameters.Dimension;
-    int z = parameters.IterationsCount;
-    int y = parameters.HDSolverIterationCount;
-    int x = parameters.MaxNumOfPoints;
-    FindXY(x, y, z, C);
-    parameters.HDSolverIterationCount = y;
-    parameters.MaxNumOfPoints = x + 3;
-
-    if (!parameters.MaxIterationsWithoutImprovement.GetIsChange())
-      parameters.MaxIterationsWithoutImprovement = parameters.IterationsCount / 10;
-
-    // Решатель
-    solver = new HDSolver(problem);
-  }
+  solver = new Solver(problem);
 
   // Решаем задачу
   if (solver->Solve() != SYSTEM_OK)
@@ -130,22 +110,4 @@ SolutionResult* GlobalizerSolveProblem(IProblem*& problem)
 void CreateCurentProblemsParameters(int argc, char* argv[])
 {
 
-}
-
-// ------------------------------------------------------------------------------------------------
-bool SelectSolver(IProblem* problem)
-{
-  int dim = problem->GetDimension();
-  if (dim == 1 ||
-    dim == 2 && parameters.IterationsCount > 100 ||
-    dim == 3 && parameters.IterationsCount > 300 ||
-    dim == 4 && parameters.IterationsCount > 1000 ||
-    dim == 5 && parameters.IterationsCount > 4000)
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
 }

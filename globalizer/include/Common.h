@@ -44,8 +44,6 @@ const int ChildStopMsg = -101;
 
 
 std::string GetFileExtension(const std::string& filename, bool include_dot = false);
-void FindXY(int& x, int& y, int z, int C);
-bool IsBelowGraph(int x, int y);
 
 
 /* ============================================================================================= *\
@@ -99,7 +97,8 @@ enum ETypeMethod
 {
   StandartMethod,
   IntegerMethod,
-  RSAMethod
+  RSAMethod,
+  MultiCriteriaMethod
 };
 
 enum ESeparableMethodType
@@ -143,7 +142,9 @@ enum ETypeCalculation
   /// MPI Вычислитель - Intel oneAPI вычислитель
   OneApi,
   /// Вычислитель на центральном процессоре с групповой обработкой точек
-  CPUMultiPoint
+  CPUMultiPoint,
+  /// Гибридный вычислитель
+  HybridLocalCalc
 };
 
 enum ETypeProcess
@@ -158,9 +159,7 @@ enum ETypeProcess
 enum ETypeSolver
 {
   /// Класический АГП
-  SingleSearch,
-  /// Решателя задач большой размерности
-  HDSearch
+  SingleSearch
 };
 
 ///Тип развертки

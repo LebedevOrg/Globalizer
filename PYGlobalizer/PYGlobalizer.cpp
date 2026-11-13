@@ -79,8 +79,23 @@ struct SolverParameters
   bool   local_refine = false;
   int    local_iterations = 100;   // число итераций локального метода
   int    verbose = 1;              // 0=silent 1=error 2=info 3=debug
+  bool   print_result = true;      // печать итогов решателя в консоль (-isPRC)
+  std::string log_prefix = "";     // префикс файлов журнала ("" - по умолчанию, в текущей папке)
+  /// Критерий остановки: "accuracy" - по точности epsilon (по умолчанию),
+  /// "iterations" - только по max_iterations (IterationOnly, как в IterationMain.cpp).
+  std::string stop_condition = "accuracy";
+  /// Когда запускать локальный метод (при local_refine=True):
+  /// "final" - один раз после глобального поиска (FinalStart, по умолчанию),
+  /// "updated" - при каждом улучшении оценки минимума (UpdatedMinimum).
+  std::string local_refine_mode = "final";
 
   void validate() const {
+    if (stop_condition != "accuracy" && stop_condition != "iterations")
+      throw std::invalid_argument("stop_condition must be 'accuracy' or 'iterations', got '"
+        + stop_condition + "'");
+    if (local_refine_mode != "final" && local_refine_mode != "updated")
+      throw std::invalid_argument("local_refine_mode must be 'final' or 'updated', got '"
+        + local_refine_mode + "'");
     if (max_iterations < 10 || max_iterations > 10000000)
       throw std::invalid_argument("max_iterations must be in [10, 10000000], got "
         + std::to_string(max_iterations));
@@ -105,7 +120,11 @@ struct SolverParameters
       ", epsilon=" + std::to_string(epsilon) +
       ", local_refine=" + (local_refine ? "True" : "False") +
       ", local_iterations=" + std::to_string(local_iterations) +
-      ", verbose=" + std::to_string(verbose) + ")";
+      ", verbose=" + std::to_string(verbose) +
+      ", print_result=" + (print_result ? "True" : "False") +
+      ", log_prefix='" + log_prefix + "'" +
+      ", stop_condition='" + stop_condition + "'" +
+      ", local_refine_mode='" + local_refine_mode + "')";
   }
 };
 
@@ -120,22 +139,12 @@ static SolutionResult* run_solver(IProblem* problem_ptr, std::string& solver_nam
 
   py::gil_scoped_release release;
 
-  if (SelectSolver(problem_ptr)) {
-    solver_name = "Solver";
-    PY_LOG_INFO("Using Solver (index method)");
-    Solver solver(problem_ptr);
-    if (solver.Solve() != SYSTEM_OK)
-      throw std::runtime_error("Solver::Solve() failed");
-    result = solver.GetSolutionResult();
-  }
-  else {
-    solver_name = "HDSolver";
-    PY_LOG_INFO("Using HDSolver (high-dimensional method)");
-    HDSolver solver(problem_ptr);
-    if (solver.Solve() != SYSTEM_OK)
-      throw std::runtime_error("HDSolver::Solve() failed");
-    result = solver.GetSolutionResult();
-  }
+  solver_name = "Solver";
+  PY_LOG_INFO("Using Solver (index method)");
+  Solver solver(problem_ptr);
+  if (solver.Solve() != SYSTEM_OK)
+    throw std::runtime_error("Solver::Solve() failed");
+  result = solver.GetSolutionResult();
   return result;
 }
 
@@ -166,6 +175,13 @@ static py::dict make_result_dict(SolutionResult* result,
 }
 
 // ------------------------------------------------------------------------------------------------
+/// Номер текущего «сеанса» глобальных параметров Globalizer. Каждый solve()
+/// и каждый IterativeSolver заново инициализирует глобальный объект
+/// parameters, поэтому ранее созданный IterativeSolver после этого
+/// продолжать нельзя - он проверяет, что его сеанс всё ещё текущий.
+static long long g_session = 0;
+
+// ------------------------------------------------------------------------------------------------
 static void apply_parameters(const SolverParameters& params)
 {
   parameters.MaxNumOfPoints = params.max_iterations;
@@ -173,9 +189,12 @@ static void apply_parameters(const SolverParameters& params)
   parameters.NumPoints = params.num_threads;
   parameters.NumThread = params.num_threads;
   parameters.Epsilon = params.epsilon;
+  parameters.IsPrintResultToConsole = params.print_result;
+  parameters.StopCondition = (params.stop_condition == "iterations") ? IterationOnly : Accuracy;
 
   if (params.local_refine) {
-    parameters.LocalRefineSolution = (ELocalMethodScheme)1;
+    parameters.LocalRefineSolution =
+      (params.local_refine_mode == "updated") ? UpdatedMinimum : FinalStart;
     parameters.TypeLocalMethod = (ETypeLocalMethod)0;
     parameters.LocalIteration = params.local_iterations;
     parameters.LocalVerificationEpsilon = params.epsilon * 0.1;
@@ -238,7 +257,8 @@ py::dict solve(py::object problem, SolverParameters params = SolverParameters())
       << " r=" << params.r << " threads=" << params.num_threads);
 
     ensure_pyproblem(problem);
-    GlobalizerInitialization(0, nullptr, false, false);
+    ++g_session;
+    GlobalizerInitialization(0, nullptr, false, false, params.log_prefix);
     apply_parameters(params);
 
     std::unique_ptr<IProblem> problem_ptr;
@@ -287,6 +307,168 @@ py::dict solve_legacy(py::object data,
   return solve(data, params);
 }
 
+// ------------------------------------------------------------------------------------------------
+/// Пошаговое решение задачи - аналог examples/IterationMain.cpp:
+///   Solver solver(problem); solver.Initialize(); solver.DoIteration(finished) ...
+/// Между итерациями Python-код может менять данные, от которых зависят
+/// функции задачи, читать текущий результат и решать, продолжать ли поиск.
+class IterativeSolver
+{
+public:
+  IterativeSolver(py::object problem, SolverParameters params)
+    : mProblemObject(problem), mParams(params)
+  {
+    mParams.validate();
+    pyglob::SetLogLevel(mParams.verbose);
+    ensure_pyproblem(problem);
+
+    mSession = ++g_session;
+    GlobalizerInitialization(0, nullptr, false, false, mParams.log_prefix);
+    apply_parameters(mParams);
+
+    mProblem = std::make_unique<PYProblem>(problem);
+    if (mProblem->Initialize() != IProblem::OK)
+      throw std::runtime_error("Problem initialization failed");
+    parameters.Dimension = mProblem->GetDimension();
+
+    mSolver = std::make_unique<Solver>(mProblem.get());
+    int rc;
+    {
+      py::gil_scoped_release release;   // Initialize уже вычисляет функции задачи
+      rc = mSolver->Initialize();
+    }
+    if (rc != 0)
+      throw std::runtime_error("Solver::Initialize() failed");
+    PY_LOG_INFO("IterativeSolver: initialized, dim=" << mProblem->GetDimension());
+  }
+
+  /// Одна итерация метода. Возвращает True, если поиск завершён.
+  bool do_iteration()
+  {
+    if (mFinished)
+      return true;
+    check_session();
+    int rc;
+    bool finished = false;
+    {
+      py::gil_scoped_release release;
+      rc = mSolver->DoIteration(finished);
+    }
+    if (rc != 0)
+      throw std::runtime_error("Solver::DoIteration() failed");
+    mFinished = finished;
+    if (mFinished)
+      mFinalResult = make_result();     // итог доступен и после запуска другого решателя
+    return mFinished;
+  }
+
+  /// До max_steps итераций (все оставшиеся при max_steps < 0) или до
+  /// завершения поиска. Возвращает число выполненных итераций.
+  int run(int max_steps)
+  {
+    int done = 0;
+    while (!mFinished && (max_steps < 0 || done < max_steps))
+    {
+      do_iteration();
+      ++done;
+    }
+    return done;
+  }
+
+  /// Текущий результат (лучшая найденная точка) в формате solve().
+  /// Для завершённого поиска возвращается сохранённый итог.
+  py::dict result()
+  {
+    if (mFinished && !mFinalResult.is_none())
+      return mFinalResult.attr("copy")().cast<py::dict>();
+    check_session();
+    return make_result();
+  }
+
+  int iterations()
+  {
+    if (mFinished && !mFinalResult.is_none())
+      return mFinalResult["iterations"].cast<int>();
+    check_session();
+    std::unique_ptr<SolutionResult> res(mSolver->GetSolutionResult());
+    delete res->BestTrial;
+    return res->IterationCount;
+  }
+
+  bool finished() const { return mFinished; }
+  bool is_active() const { return mSession == g_session; }
+
+  /// Печать итогов решателя (как Solver::PrintResultToConsole в IterationMain.cpp).
+  void print_result()
+  {
+    check_session();
+    mSolver->PrintResultToConsole();
+  }
+
+  /// Протокол итератора: for state in solver: ... - одна итерация на шаг.
+  py::dict next()
+  {
+    if (mFinished)
+      throw py::stop_iteration();
+    do_iteration();
+    return result();
+  }
+
+  std::string repr() const
+  {
+    return std::string("IterativeSolver(finished=") + (mFinished ? "True" : "False") +
+      ", active=" + (is_active() ? "True" : "False") + ")";
+  }
+
+private:
+  py::dict make_result()
+  {
+    std::unique_ptr<SolutionResult> res(mSolver->GetSolutionResult());
+    py::dict d;
+    const Trial* best = res->BestTrial;
+    const int nf = mProblem->GetNumberOfFunctions();
+    const bool has_point = best != nullptr && best->index >= 0 && best->index < nf;
+    d["success"] = true;
+    d["finished"] = mFinished;
+    d["feasible"] = has_point && best->index == nf - 1;
+    if (has_point)
+    {
+      d["best_value"] = best->FuncValues[best->index];
+      py::list point;
+      for (int i = 0; i < mProblem->GetDimension(); ++i)
+        point.append(best->y[i]);
+      d["best_point"] = point;
+    }
+    else
+    {
+      d["best_value"] = py::none();
+      d["best_point"] = py::none();
+    }
+    d["iterations"] = res->IterationCount;
+    d["trials"] = res->TrialCount;
+    d["solver"] = "IterativeSolver";
+    delete res->BestTrial;
+    res->BestTrial = nullptr;
+    return d;
+  }
+
+  void check_session() const
+  {
+    if (!is_active())
+      throw std::runtime_error(
+        "IterativeSolver is no longer valid: solve() or another IterativeSolver has "
+        "re-initialized the global Globalizer parameters. Only one solver can be active.");
+  }
+
+  py::object mProblemObject;              // держит Python-объект задачи живым
+  SolverParameters mParams;
+  long long mSession = 0;
+  bool mFinished = false;
+  py::object mFinalResult = py::none();   // итог завершённого поиска
+  std::unique_ptr<PYProblem> mProblem;    // объявлен до mSolver: удаляется после него
+  std::unique_ptr<Solver> mSolver;
+};
+
 
 // ------------------------------------------------------------------------------------------------
 PYBIND11_MODULE(PYDGlobalizer, m)
@@ -319,6 +501,18 @@ PYBIND11_MODULE(PYDGlobalizer, m)
                 Iterations of the local method (default: 100).
             verbose : int
                 Log level: 0=silent 1=error 2=info 3=debug (default: 1).
+            print_result : bool
+                Print the solver summary to the console (default: True).
+            log_prefix : str
+                Prefix (may include a directory) of the solver log files;
+                empty - default name in the current directory (default: "").
+            stop_condition : str
+                "accuracy" - stop when epsilon is reached (default);
+                "iterations" - stop only after max_iterations.
+            local_refine_mode : str
+                When local_refine is on: "final" - run the local method once
+                after the global search (default); "updated" - run it every
+                time the minimum estimate improves.
         )pbdoc")
     .def(py::init<>())
     .def_readwrite("max_iterations", &SolverParameters::max_iterations)
@@ -328,6 +522,10 @@ PYBIND11_MODULE(PYDGlobalizer, m)
     .def_readwrite("local_refine", &SolverParameters::local_refine)
     .def_readwrite("local_iterations", &SolverParameters::local_iterations)
     .def_readwrite("verbose", &SolverParameters::verbose)
+    .def_readwrite("print_result", &SolverParameters::print_result)
+    .def_readwrite("log_prefix", &SolverParameters::log_prefix)
+    .def_readwrite("stop_condition", &SolverParameters::stop_condition)
+    .def_readwrite("local_refine_mode", &SolverParameters::local_refine_mode)
     .def("validate", &SolverParameters::validate, "Validate parameter values.")
     .def("__repr__", &SolverParameters::repr);
 
@@ -358,6 +556,48 @@ PYBIND11_MODULE(PYDGlobalizer, m)
                   success (bool), best_value (float), best_point (list[float]),
                   iterations (int), solver (str), error (str, optional)
           )pbdoc");
+
+  py::class_<IterativeSolver>(m, "IterativeSolver",
+    R"pbdoc(
+            Step-by-step solving (like examples/IterationMain.cpp).
+
+            The constructor initializes the solver (the first trials are made).
+            Between iterations Python code may change data used by the problem
+            functions, inspect the current result and decide whether to go on.
+
+            Only one solver can be active: solve() or a new IterativeSolver
+            re-initializes the global Globalizer parameters, after which the
+            old IterativeSolver raises RuntimeError.
+
+            Example
+            -------
+            >>> solver = PYDGlobalizer.IterativeSolver(problem, params)
+            >>> while not solver.do_iteration():
+            ...     pass
+            >>> solver.result()["best_value"]
+            >>> for state in PYDGlobalizer.IterativeSolver(problem, params):
+            ...     print(state["iterations"], state["best_value"])
+        )pbdoc")
+    .def(py::init<py::object, SolverParameters>(),
+      py::arg("problem"), py::arg("params") = SolverParameters())
+    .def("do_iteration", &IterativeSolver::do_iteration,
+      "Perform one iteration. Returns True when the search is finished.")
+    .def("run", &IterativeSolver::run, py::arg("max_steps") = -1,
+      "Perform up to max_steps iterations (all remaining if max_steps < 0) or until "
+      "the search is finished. Returns the number of performed iterations.")
+    .def("result", &IterativeSolver::result,
+      "Current result: success, finished, feasible, best_value, best_point, "
+      "iterations, trials, solver.")
+    .def("print_result", &IterativeSolver::print_result,
+      "Print the solver summary to the console.")
+    .def_property_readonly("finished", &IterativeSolver::finished)
+    .def_property_readonly("iterations", &IterativeSolver::iterations)
+    .def_property_readonly("is_active", &IterativeSolver::is_active,
+      "False after solve() or another IterativeSolver has been started.")
+    .def("__iter__", [](IterativeSolver& s) -> IterativeSolver& { return s; },
+      py::return_value_policy::reference_internal)
+    .def("__next__", &IterativeSolver::next)
+    .def("__repr__", &IterativeSolver::repr);
 
   m.def("validate_problem", &validate_problem,
     py::arg("problem"),

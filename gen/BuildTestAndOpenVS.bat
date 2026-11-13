@@ -109,13 +109,14 @@ echo ========================================
 echo [3/9] Python packages
 echo ========================================
 "%PY_EXE%" -m pip install --upgrade pip
-set "REQ_FILE=%ROOT_DIR%\requirements_build.txt"
-if not exist "%REQ_FILE%" set "REQ_FILE=%ROOT_DIR%\requirements.txt"
-echo Using "%REQ_FILE%"
-"%PY_EXE%" -m pip install -r "%REQ_FILE%"
-if errorlevel 1 echo [WARNING] some packages failed to install. Continuing...
-"%PY_EXE%" -m pip install pybind11 numpy
-if errorlevel 1 ( set "FAIL_MSG=pip install of pybind11/numpy failed." & goto error )
+REM Скрипт собирает ВСЁ и запускает ВСЕ тесты, поэтому ставит все наборы:
+REM   requirements.txt         - библиотеки Globalizer (numpy, визуализация lib/plotters);
+REM   requirements_build.txt   - сборка Python-интерфейса (pybind11, numpy);
+REM   iOptProblemSimple        - задача iOptProblemSimple (requests, tqdm);
+REM   requirements_compare.txt - тесты сравнения с scipy / Optuna.
+REM Одним вызовом pip - чтобы версии были согласованы между наборами.
+"%PY_EXE%" -m pip install -r "%ROOT_DIR%\requirements.txt" -r "%ROOT_DIR%\requirements_build.txt" -r "%ROOT_DIR%\third_party\Problems\Problems\iOptProblemSimple\requirements.txt" -r "%ROOT_DIR%\requirements_compare.txt"
+if errorlevel 1 ( set "FAIL_MSG=pip install of the requirements failed." & goto error )
 
 set "PYBIND11_DIR="
 "%PY_EXE%" -m pybind11 --cmakedir > "%TMP_OUT%" 2>nul

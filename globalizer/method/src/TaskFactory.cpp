@@ -14,7 +14,6 @@
 /////////////////////////////////////////////////////////////////////////////
 
 #include "TaskFactory.h"
-#include "HDTask.h"
 
 
 int TaskFactory::num = 0;
@@ -23,11 +22,7 @@ std::vector<int> TaskFactory::permutations;
 // ------------------------------------------------------------------------------------------------
 Task* TaskFactory::CreateTask(IProblem* _problem, int _ProcLevel)
 {
-  Task* res = 0;
-  if (parameters.TypeSolver == HDSearch)
-    res = new HDTask(_problem, 0);
-  else
-    res = new Task(_problem, 0);
+  Task* res = new Task(_problem, 0);
   res->num = num++;
   return res;
 }
@@ -35,12 +30,7 @@ Task* TaskFactory::CreateTask(IProblem* _problem, int _ProcLevel)
 // ------------------------------------------------------------------------------------------------
 Task * TaskFactory::CreateTask()
 {
-  Task* res = 0;
-
-  if (parameters.TypeSolver == HDSearch)
-    res = new HDTask();
-  else
-    res = new Task();
+  Task* res = new Task();
   res->num = num++;
   return res;
 }

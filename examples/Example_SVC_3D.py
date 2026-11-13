@@ -60,13 +60,15 @@ def main():
     problem.copy_from_problem(p)
 
     # Позиционная форма — через solve_legacy (сохраняет прежний смысл вызова).
-    result = PYDGlobalizer.solve_legacy(problem, 3, 5, False, 1)
+    # maxParams должен быть не меньше 10 (проверка в PYDGlobalizer).
+    result = PYDGlobalizer.solve_legacy(problem, 50, 5, False, 1)
 
     if result.get("success"):
         print("f* =", result["best_value"])
         print("x* =", [round(v, 5) for v in result["best_point"]])
     else:
         print("Ошибка:", result.get("error"))
+        sys.exit(1)
 
 
 if __name__ == "__main__":

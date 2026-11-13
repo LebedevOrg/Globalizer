@@ -182,13 +182,17 @@ echo "========================================"
 echo "[3/9] Python packages"
 echo "========================================"
 "$PY_EXE" -m pip install --upgrade pip
-REQ_FILE="$ROOT_DIR/requirements_build.txt"
-[ -f "$REQ_FILE" ] || REQ_FILE="$ROOT_DIR/requirements.txt"
-echo "Using $REQ_FILE"
-if [ -f "$REQ_FILE" ]; then
-  "$PY_EXE" -m pip install -r "$REQ_FILE" || echo "[WARNING] some packages failed to install. Continuing..."
-fi
-"$PY_EXE" -m pip install pybind11 numpy || die "pip install of pybind11/numpy failed."
+# Скрипт собирает ВСЁ и запускает ВСЕ тесты, поэтому ставит все наборы:
+#   requirements.txt         - библиотеки Globalizer (numpy, визуализация lib/plotters);
+#   requirements_build.txt   - сборка Python-интерфейса (pybind11, numpy);
+#   iOptProblemSimple        - задача iOptProblemSimple (requests, tqdm);
+#   requirements_compare.txt - тесты сравнения с scipy / Optuna.
+# Одним вызовом pip - чтобы версии были согласованы между наборами.
+"$PY_EXE" -m pip install \
+  -r "$ROOT_DIR/requirements.txt" \
+  -r "$ROOT_DIR/requirements_build.txt" \
+  -r "$ROOT_DIR/third_party/Problems/Problems/iOptProblemSimple/requirements.txt" \
+  -r "$ROOT_DIR/requirements_compare.txt" || die "pip install of the requirements failed."
 
 PYBIND11_DIR="$("$PY_EXE" -m pybind11 --cmakedir 2>/dev/null)"
 [ -n "$PYBIND11_DIR" ] || die "Cannot get pybind11 CMake dir."

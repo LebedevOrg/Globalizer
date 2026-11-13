@@ -134,8 +134,8 @@ def create_lines_level_figure(current_color_scale,current_color, functional_coun
         fig = go.Figure(data=[go.Contour(x=x, y=y, z=z,
             colorscale=current_color_scale,
             colorbar={
-                'title': 'значения<br>целевой<br>функции',
-                'titleside': 'right'
+                # 'titleside' удалён в plotly 6; title.side работает и в plotly 5
+                'title': {'text': 'значения<br>целевой<br>функции', 'side': 'right'}
             }
         )])
 
@@ -264,6 +264,11 @@ def calculate_data(xaxis_column_name, yaxis_column_name, calc,
     bounds_y = next(iter(float_parameters_bounds[
         (float_parameters_names).index(yaxis_column_name)
     ].values()))
+
+    if calc in ('интерполяция', 'аппроксимация') and len(np.unique(np.array(list(zip(x, y))), axis=0)) < 3:
+        # в окрестности лучшей точки (по прочим параметрам) почти нет испытаний - обычно при большой размерности
+        raise ValueError(f'в окрестности лучшего решения {len(x)} точек испытаний - для режима '
+                         f'«{calc}» нужно хотя бы 3; выберите режим «по точкам испытаний»')
 
     if calc == 'интерполяция':
         #if not self.__discrete_parameters_names:

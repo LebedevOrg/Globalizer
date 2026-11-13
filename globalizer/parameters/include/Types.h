@@ -1201,6 +1201,8 @@ void TETypeMethod<Owner>::operator = (std::string data)
     *this = IntegerMethod;
   if ((data == "RSAMethod") || (data == "2"))
       *this = RSAMethod;
+  if (data == "MultiCriteriaMethod")
+    *this = MultiCriteriaMethod;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1215,6 +1217,8 @@ TETypeMethod<Owner>::operator std::string()
     s = "IntegerMethod";
   if (this->mValue == RSAMethod)
       s = "RSAMethod";
+  if (this->mValue == MultiCriteriaMethod)
+    s = "MultiCriteriaMethod";
   return s;
 }
 
@@ -1352,6 +1356,8 @@ void TETypeCalculation<Owner>::operator = (std::string data)
     *this = OneApi;
   if ((data == "CPUMultiPoint") || (data == "5"))
     *this = CPUMultiPoint;
+  if ((data == "HybridLocalCalc") || (data == "6"))
+    *this = HybridLocalCalc;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1372,6 +1378,8 @@ TETypeCalculation<Owner>::operator std::string()
     s = "OneApi";
   if (this->mValue == CPUMultiPoint)
     s = "CPUMultiPoint";
+  if (this->mValue == HybridLocalCalc)
+      s = "HybridLocalCalc";
   return s;
 }
 
@@ -1408,8 +1416,6 @@ void TETypeSolver<Owner>::operator = (std::string data)
 {
   if ((data == "SingleSearch") || (data == "0"))
     *this = SingleSearch;
-  if ((data == "HDSearch") || (data == "2"))
-    *this = HDSearch;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1418,8 +1424,6 @@ template <class Owner>
 TETypeSolver<Owner>::operator std::string()
 {
   std::string s;
-  if (this->mValue == HDSearch)
-    s = "HDSearch";
   if (this->mValue == SingleSearch)
     s = "SingleSearch";
   return s;
@@ -1487,7 +1491,8 @@ void TETypeLocalMethod<Owner>::operator = (std::string data)
     *this = HookeJeeves;
   if ((data == "LeastSquareMethod") || (data == "1"))
     *this = LeastSquareMethod;
-  if ((data == "ParallelHookeJeeves") || (data == "3"))
+  // ParallelHookeJeeves == 2 в ETypeLocalMethod; "3" оставлено для совместимости.
+  if ((data == "ParallelHookeJeeves") || (data == "2") || (data == "3"))
     *this = ParallelHookeJeeves;
 }
 
