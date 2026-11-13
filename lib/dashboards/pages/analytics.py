@@ -28,6 +28,13 @@ def render_multidimensional_representation(parameters_names):
         ], style={"background-color": "#FFFFFF", "border": "20px solid #FFFFFF"})
 
 def render_surface_and_level_lines(figure_type_names, calculation_type_names, float_parameters_names):
+    if len(float_parameters_names) < 2:
+        # поверхность и линии уровня строятся по двум непрерывным параметрам
+        return html.Div(children=[
+            html.H2('Визуализация в окрестности лучшего решения', style={'textAlign': 'left'}),
+            html.P('Нужны хотя бы два непрерывных параметра, у задачи их: '
+                   f'{len(float_parameters_names)}.'),
+        ], style={"background-color": "#FFFFFF", "border": "20px solid #FFFFFF", })
     return html.Div(children=[
         html.H2('Визуализация в окрестности лучшего решения', style={'textAlign': 'left'}),
         html.Div([
