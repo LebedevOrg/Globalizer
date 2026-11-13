@@ -1,4 +1,4 @@
-/////////////////////////////////////////////////////////////////////////////
+ï»¿/////////////////////////////////////////////////////////////////////////////
 //                                                                         //
 //             LOBACHEVSKY STATE UNIVERSITY OF NIZHNY NOVGOROD             //
 //                                                                         //
@@ -39,17 +39,17 @@ void HybridLocalTask::SetFixedPoint(const double* fullDimensionPoint)
     }
 }
 
-int HybridLocalTask::GetN() { return mOriginalTask->GetN(); }
-const double* HybridLocalTask::GetA() { return mOriginalTask->GetA(); }
-const double* HybridLocalTask::GetB() { return mOriginalTask->GetB(); }
-int HybridLocalTask::GetNumOfFunc() { return mOriginalTask->GetNumOfFunc(); }
+int HybridLocalTask::GetN() const { return mOriginalTask->GetN(); }
+const double* HybridLocalTask::GetA() const { return mOriginalTask->GetA(); }
+const double* HybridLocalTask::GetB() const { return mOriginalTask->GetB(); }
+int HybridLocalTask::GetNumOfFunc() const { return mOriginalTask->GetNumOfFunc(); }
 int HybridLocalTask::GetNumberOfDiscreteVariable() { return mOriginalTask->GetNumberOfDiscreteVariable(); }
 bool HybridLocalTask::IsLeaf() { return mOriginalTask->IsLeaf(); }
 
 // ------------------------------------------------------------------------------------------------
 double HybridLocalTask::CalculateFuncs(const double* x, int fNumber)
 {
-    // Åñëè àëãîðèòì ïûòàåòñÿ èçìåíèòü ãëîáàëüíóþ ïåðåìåííóþ, ìû åãî øòðàôóåì
+    // Ð•ÑÐ»Ð¸ Ð°Ð»Ð³Ð¾Ñ€Ð¸Ñ‚Ð¼ Ð¿Ñ‹Ñ‚Ð°ÐµÑ‚ÑÑ Ð¸Ð·Ð¼ÐµÐ½Ð¸Ñ‚ÑŒ Ð³Ð»Ð¾Ð±Ð°Ð»ÑŒÐ½ÑƒÑŽ Ð¿ÐµÑ€ÐµÐ¼ÐµÐ½Ð½ÑƒÑŽ, Ð¼Ñ‹ ÐµÐ³Ð¾ ÑˆÑ‚Ñ€Ð°Ñ„ÑƒÐµÐ¼
     for (int idx : mGlobalIndices) {
         if (std::abs(x[idx] - mFixedValues[idx]) > 1e-9) {
             return HUGE_VAL;

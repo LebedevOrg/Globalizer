@@ -21,20 +21,21 @@ HybridLocalCalculation::HybridLocalCalculation(Task& originalTask)
     mLocalTask(nullptr)
 {
     std::vector<int> localIndices;
-    if (parameters.LocalVarIndices.GetSize() > 0 && parameters.LocalVarIndices[0] != 0) {
-        for (int i = 0; i < parameters.LocalVarIndices.GetSize(); ++i) {
-            localIndices.push_back(parameters.LocalVarIndices[i]);
-        }
-    }
-    else {
-        int dim = originalTask.GetN();
-        if (dim >= 2) {
-            localIndices.push_back(dim - 2);
-            localIndices.push_back(dim - 1);
+
+    // Фильтруем индексы: оставляем только валидные
+    for (int i = 0; i < parameters.LocalVarIndices.GetSize(); ++i) {
+        int idx = parameters.LocalVarIndices[i];
+        if (idx >= 0 && idx < originalTask.GetN()) {
+            // Убираем дубликаты
+            if (std::find(localIndices.begin(), localIndices.end(), idx) == localIndices.end()) {
+                localIndices.push_back(idx);
+            }
         }
     }
 
-    mLocalTask = new HybridLocalTask(&originalTask, localIndices);
+    if (!localIndices.empty()) {
+        mLocalTask = new HybridLocalTask(&originalTask, localIndices);
+    }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -57,6 +58,23 @@ void HybridLocalCalculation::Calculate(InformationForCalculation& input, TResult
         if (!agpTrial) continue;
 
         int fNum = (agpTrial->index >= 0) ? agpTrial->index : (numFuncs - 1);
+
+        // Если локальная оптимизация не настроена (индексы пусты или все невалидны),
+        // просто вычисляем функцию в исходной точке и переходим к следующей
+        if (mLocalTask == nullptr) {
+            agpTrial->FuncValues[fNum] = mOriginalTask->CalculateFuncs(agpTrial->y, fNum);
+            agpTrial->index = fNum;
+
+            output.trials[j] = TrialFactory::CreateTrial(agpTrial->y);
+            output.trials[j]->index = agpTrial->index;
+
+            for (int k = 0; k < numFuncs; ++k) {
+                output.trials[j]->FuncValues[k] = agpTrial->FuncValues[k];
+            }
+
+            output.countCalcTrials[fNum] += 1;
+            continue;
+        }
 
         mLocalTask->SetFixedPoint(agpTrial->y);
 
