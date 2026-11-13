@@ -6,6 +6,7 @@ import dash
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from dash import dcc, html
 from dash.dependencies import Input, Output
 
@@ -477,11 +478,19 @@ class StaticDashboard:
 
     def __update_surface_or_lines_level_figure(self, xaxis_column_name=None, yaxis_column_name=None, type='3D поверхность',
         calc='интерполяция', show_additional_figs=True):
-        bounds_x, bounds_y, x, y, z, xi, yi, Z, x_unaccept, y_unaccept = calculate_data(
-            xaxis_column_name, yaxis_column_name, calc,
-            self.__dfSDI, self.__parameters_names, self.__float_parameters_names, self.__discrete_parameters_names,
-            self.__best_discrete_point_dictionary, self.__best_float_point_dictionary, self.__parameter_eps,
-            self.__functional_count, self.__float_parameters_bounds)
+        try:
+            bounds_x, bounds_y, x, y, z, xi, yi, Z, x_unaccept, y_unaccept = calculate_data(
+                xaxis_column_name, yaxis_column_name, calc,
+                self.__dfSDI, self.__parameters_names, self.__float_parameters_names, self.__discrete_parameters_names,
+                self.__best_discrete_point_dictionary, self.__best_float_point_dictionary, self.__parameter_eps,
+                self.__functional_count, self.__float_parameters_bounds)
+        except ValueError as e:
+            fig = go.Figure()
+            fig.add_annotation(text=f'График не построен: {e}', showarrow=False,
+                               xref='paper', yref='paper', x=0.5, y=0.5)
+            fig.update_xaxes(visible=False)
+            fig.update_yaxes(visible=False)
+            return fig
         if type == '3D поверхность':
             return create_surface_figure(self.__current_color_scale,
                 self.__best_float_point_dictionary, self.__best_value, self.__discrete_parameters_names, self.__best_discrete_point_dictionary,
