@@ -85,8 +85,15 @@ int main(int argc, char* argv[])
           y[i] = bestTrialY[i];
       }
   }
-  
-  globalizerBenchmarksProblem->Finalize(y, u);
+
+  if (parameters.GetProcRank() == 0) {
+#pragma omp single
+      {
+          globalizerBenchmarksProblem->Finalize(y, u);
+      }
+  }
+
+
 #endif
 
   if (parameters.IsMPIInit())
